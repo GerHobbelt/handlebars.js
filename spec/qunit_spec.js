@@ -577,6 +577,13 @@ test("Partials with slash paths", function() {
   shouldCompileToWithPartials(string, [hash, {}, {'shared/dude':dude}], true, "Dudes: Jeepers", "Partials can use literal paths");
 });
 
+test("Partials with slash and point paths", function() {
+  var string = "Dudes: {{> shared/dude.thing}}";
+  var dude = "{{name}}";
+  var hash = {name:"Jeepers", another_dude:"Creepers"};
+  shouldCompileToWithPartials(string, [hash, {}, {'shared/dude.thing':dude}], true, "Dudes: Jeepers", "Partials can use literal with points in paths");
+});
+
 test("Multiple partial registration", function() {
   Handlebars.registerPartial({
     'shared/dude': '{{name}}',
@@ -1502,3 +1509,27 @@ test('isEmpty', function() {
   equal(Handlebars.Utils.isEmpty('foo'), false);
   equal(Handlebars.Utils.isEmpty({bar: 1}), false);
 });
+
+if (typeof(require) !== 'undefined') {
+  suite('Require');
+
+  test('Load .handlebars files with require()', function() {
+    var template = require("./example_1");
+    assert.deepEqual(template, require("./example_1.handlebars"));
+
+    var expected = 'foo\n';
+    var result = template({foo: "foo"});
+
+    equal(result, expected);
+  });
+
+  test('Load .hbs files with require()', function() {
+    var template = require("./example_2");
+    assert.deepEqual(template, require("./example_2.hbs"));
+
+    var expected = 'Hello, World!\n';
+    var result = template({name: "World"});
+
+    equal(result, expected);
+  });
+}

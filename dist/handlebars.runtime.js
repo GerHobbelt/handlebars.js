@@ -36,7 +36,7 @@ THE SOFTWARE.
 ;
 // lib/handlebars/base.js
 
-Handlebars.VERSION = "1.0.0-rc.3";
+Handlebars.VERSION = "1.0.0-rc.4";
 Handlebars.COMPILER_REVISION = 3;
 
 Handlebars.REVISION_CHANGES = {
@@ -159,19 +159,19 @@ Handlebars.registerHelper('each', function(context, options) {
   return ret;
 });
 
-Handlebars.registerHelper('if', function(context, options) {
-  var type = toString.call(context);
-  if(type === functionType) { context = context.call(this); }
+Handlebars.registerHelper('if', function(conditional, options) {
+  var type = toString.call(conditional);
+  if(type === functionType) { conditional = conditional.call(this); }
 
-  if(!context || Handlebars.Utils.isEmpty(context)) {
+  if(!conditional || Handlebars.Utils.isEmpty(conditional)) {
     return options.inverse(this);
   } else {
     return options.fn(this);
   }
 });
 
-Handlebars.registerHelper('unless', function(context, options) {
-  return Handlebars.helpers['if'].call(this, context, {fn: options.inverse, inverse: options.fn});
+Handlebars.registerHelper('unless', function(conditional, options) {
+  return Handlebars.helpers['if'].call(this, conditional, {fn: options.inverse, inverse: options.fn});
 });
 
 Handlebars.registerHelper('with', function(context, options) {
