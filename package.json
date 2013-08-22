@@ -28,7 +28,7 @@
     "mustache": "~0.7.2",
     "should": "~1.2.2"
   },
-  "main": "lib/handlebars.js",
+  "main": "lib/handlebars.runtime.js",
   "bin": {
     "handlebars": "bin/handlebars"
   },
