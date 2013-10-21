@@ -1,7 +1,11 @@
 vendor
 .rvmrc
 .DS_Store
-/dist/
+
+!/dist/
+/dist/*
+!/dist/cjs/
+
 /tmp/
 node_modules
 *.sublime-project
