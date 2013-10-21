@@ -1,3 +1,9 @@
+global.handlebarsEnv = null;
+
+beforeEach(function() {
+  global.handlebarsEnv = Handlebars.create();
+});
+
 describe("basic context", function() {
   it("most basic", function() {
     shouldCompileTo("{{foo}}", { foo: "foo" }, "foo");
@@ -5,7 +11,9 @@ describe("basic context", function() {
 
   it("escaping", function() {
     shouldCompileTo("\\{{foo}}", { foo: "food" }, "{{foo}}");
+    shouldCompileTo("content \\{{foo}}", { foo: "food" }, "content {{foo}}");
     shouldCompileTo("\\\\{{foo}}", { foo: "food" }, "\\food");
+    shouldCompileTo("content \\\\{{foo}}", { foo: "food" }, "content \\food");
     shouldCompileTo("\\\\ {{foo}}", { foo: "food" }, "\\\\ food");
   });
 
@@ -81,6 +89,18 @@ describe("basic context", function() {
         {awesome: function(context) { return context; },
           frank: "Frank"},
         "Frank", "functions are called with context arguments");
+  });
+
+  it("block functions with context argument", function() {
+    shouldCompileTo("{{#awesome 1}}inner {{.}}{{/awesome}}",
+        {awesome: function(context, options) { return options.fn(context); }},
+        "inner 1", "block functions are called with context and options");
+  });
+
+  it("block functions without context argument", function() {
+    shouldCompileTo("{{#awesome}}inner{{/awesome}}",
+        {awesome: function(options) { return options.fn(this); }},
+        "inner", "block functions are called with options");
   });
 
 

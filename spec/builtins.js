@@ -1,10 +1,5 @@
 /*global CompilerContext, shouldCompileTo, compileWithPartials */
 describe('builtin helpers', function() {
-  var originalLog = Handlebars.log;
-  afterEach(function() {
-    Handlebars.log = originalLog;
-  });
-
   describe('#if', function() {
     it("if", function() {
       var string   = "{{#if goodbye}}GOODBYE {{/if}}cruel {{world}}!";
@@ -20,8 +15,11 @@ describe('builtin helpers', function() {
                       "if with non-empty array shows the contents");
       shouldCompileTo(string, {goodbye: [], world: "world"}, "cruel world!",
                       "if with empty array does not show the contents");
-      shouldCompileTo(string, {goodbye: 0, world: "world"}, "GOODBYE cruel world!",
-                      "if with zero does show the contents");
+      shouldCompileTo(string, {goodbye: 0, world: "world"}, "cruel world!",
+                      "if with zero does not show the contents");
+      shouldCompileTo("{{#if goodbye includeZero=true}}GOODBYE {{/if}}cruel {{world}}!",
+                      {goodbye: 0, world: "world"}, "GOODBYE cruel world!",
+                      "if with zero does not show the contents");
     });
 
     it("if with function argument", function() {
@@ -49,6 +47,12 @@ describe('builtin helpers', function() {
   });
 
   describe('#each', function() {
+    beforeEach(function() {
+      handlebarsEnv.registerHelper('detectDataInsideEach', function(options) {
+        return options.data && options.data.exclaim;
+      });
+    });
+
     it("each", function() {
       var string   = "{{#each goodbyes}}{{text}}! {{/each}}cruel {{world}}!";
       var hash     = {goodbyes: [{text: "goodbye"}, {text: "Goodbye"}, {text: "GOODBYE"}], world: "world"};
@@ -94,6 +98,46 @@ describe('builtin helpers', function() {
       equal(result, "0. goodbye! 0 1 2 After 0 1. Goodbye! 0 1 2 After 1 2. GOODBYE! 0 1 2 After 2 cruel world!", "The @index variable is used");
     });
 
+    it("each with @first", function() {
+      var string = "{{#each goodbyes}}{{#if @first}}{{text}}! {{/if}}{{/each}}cruel {{world}}!";
+      var hash   = {goodbyes: [{text: "goodbye"}, {text: "Goodbye"}, {text: "GOODBYE"}], world: "world"};
+
+      var template = CompilerContext.compile(string);
+      var result = template(hash);
+
+      equal(result, "goodbye! cruel world!", "The @first variable is used");
+    });
+
+    it("each with nested @first", function() {
+      var string = "{{#each goodbyes}}({{#if @first}}{{text}}! {{/if}}{{#each ../goodbyes}}{{#if @first}}{{text}}!{{/if}}{{/each}}{{#if @first}} {{text}}!{{/if}}) {{/each}}cruel {{world}}!";
+      var hash   = {goodbyes: [{text: "goodbye"}, {text: "Goodbye"}, {text: "GOODBYE"}], world: "world"};
+
+      var template = CompilerContext.compile(string);
+      var result = template(hash);
+
+      equal(result, "(goodbye! goodbye! goodbye!) (goodbye!) (goodbye!) cruel world!", "The @first variable is used");
+    });
+
+    it("each with @last", function() {
+      var string = "{{#each goodbyes}}{{#if @last}}{{text}}! {{/if}}{{/each}}cruel {{world}}!";
+      var hash   = {goodbyes: [{text: "goodbye"}, {text: "Goodbye"}, {text: "GOODBYE"}], world: "world"};
+
+      var template = CompilerContext.compile(string);
+      var result = template(hash);
+
+      equal(result, "GOODBYE! cruel world!", "The @last variable is used");
+    });
+
+    it("each with nested @last", function() {
+      var string = "{{#each goodbyes}}({{#if @last}}{{text}}! {{/if}}{{#each ../goodbyes}}{{#if @last}}{{text}}!{{/if}}{{/each}}{{#if @last}} {{text}}!{{/if}}) {{/each}}cruel {{world}}!";
+      var hash   = {goodbyes: [{text: "goodbye"}, {text: "Goodbye"}, {text: "GOODBYE"}], world: "world"};
+
+      var template = CompilerContext.compile(string);
+      var result = template(hash);
+
+      equal(result, "(GOODBYE!) (GOODBYE!) (GOODBYE! GOODBYE! GOODBYE!) cruel world!", "The @last variable is used");
+    });
+
     it("each with function argument", function() {
       var string = "{{#each goodbyes}}{{text}}! {{/each}}cruel {{world}}!";
       var hash   = {goodbyes: function () { return [{text: "goodbye"}, {text: "Goodbye"}, {text: "GOODBYE"}];}, world: "world"};
@@ -116,9 +160,6 @@ describe('builtin helpers', function() {
       equal(result, 'a!b!c!', 'should output data');
     });
 
-    Handlebars.registerHelper('detectDataInsideEach', function(options) {
-      return options.data && options.data.exclaim;
-    });
   });
 
   it("#log", function() {
@@ -127,7 +168,7 @@ describe('builtin helpers', function() {
     var hash   = { blah: "whee" };
 
     var levelArg, logArg;
-    Handlebars.log = function(level, arg){ levelArg = level, logArg = arg; };
+    handlebarsEnv.log = function(level, arg){ levelArg = level, logArg = arg; };
 
     shouldCompileTo(string, hash, "", "log should not display");
     equals(1, levelArg, "should call log with 1");
