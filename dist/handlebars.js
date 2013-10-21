@@ -142,6 +142,9 @@ Handlebars.registerHelper('each', function(context, options) {
   if (options.data) {
     data = Handlebars.createFrame(options.data);
   }
+  if (!data.root) {
+    data.root = this;
+  }
 
   if(context && typeof context === 'object') {
     if (isArray(context)) {
@@ -184,7 +187,13 @@ Handlebars.registerHelper('unless', function(conditional, options) {
 Handlebars.registerHelper('with', function(context, options) {
   if (isFunction(context)) { context = context.call(this); }
 
-  if (!Handlebars.Utils.isEmpty(context)) return options.fn(context);
+  if (!Handlebars.Utils.isEmpty(context)) {
+    if (options.data && !options.data.root) {
+      options.data = Handlebars.createFrame(options.data);
+      options.data.root = this;
+    }
+    return options.fn(context);
+  }
 });
 
 Handlebars.registerHelper('log', function(context, options) {
