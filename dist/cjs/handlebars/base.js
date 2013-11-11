@@ -88,6 +88,9 @@ function registerDefaultHelpers(instance) {
     if (options.data) {
       data = createFrame(options.data);
     }
+    if (!data.root) {
+      data.root = this;
+    }
 
     if(context && typeof context === 'object') {
       if (isArray(context)) {
@@ -121,7 +124,7 @@ function registerDefaultHelpers(instance) {
     if (isFunction(conditional)) { conditional = conditional.call(this); }
 
     if (options.data) {
-      data = Handlebars.createFrame(options.data);
+      data = createFrame(options.data);
     }
     if (!data.root) {
       data.root = this;
@@ -146,7 +149,7 @@ function registerDefaultHelpers(instance) {
 
     if (!Utils.isEmpty(context)) {
       if (options.data && !options.data.root) {
-        options.data = Handlebars.createFrame(options.data);
+        options.data = createFrame(options.data);
         options.data.root = this;
       }
       return options.fn(context);

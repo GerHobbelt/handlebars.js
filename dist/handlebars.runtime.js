@@ -22,8 +22,6 @@ var __module2__ = (function(__dependency1__) {
   var __exports__ = {};
   var SafeString = __dependency1__;
 
-  var isArray = Array.isArray;
-
   var escape = {
     "&": "&amp;",
     "<": "&lt;",
@@ -48,7 +46,27 @@ var __module2__ = (function(__dependency1__) {
     }
   }
 
-  __exports__.extend = extend;function escapeExpression(string) {
+  __exports__.extend = extend;var toString = Object.prototype.toString;
+  __exports__.toString = toString;
+  // Sourced from lodash
+  // https://github.com/bestiejs/lodash/blob/master/LICENSE.txt
+  var isFunction = function(value) {
+    return typeof value === 'function';
+  };
+  // fallback for older versions of Chrome and Safari
+  if (isFunction(/x/)) {
+    isFunction = function(value) {
+      return typeof value === 'function' && toString.call(value) === '[object Function]';
+    };
+  }
+  var isFunction;
+  __exports__.isFunction = isFunction;
+  var isArray = Array.isArray || function(value) {
+    return (value && typeof value === 'object') ? toString.call(value) === '[object Array]' : false;
+  };
+  __exports__.isArray = isArray;
+
+  function escapeExpression(string) {
     // don't escape SafeStrings, since they're already safe
     if (string instanceof SafeString) {
       return string.toString();
@@ -109,7 +127,7 @@ var __module1__ = (function(__dependency1__, __dependency2__) {
   var Utils = __dependency1__;
   var Exception = __dependency2__;
 
-  var VERSION = "1.0.0";
+  var VERSION = "1.1.2";
   __exports__.VERSION = VERSION;var COMPILER_REVISION = 4;
   __exports__.COMPILER_REVISION = COMPILER_REVISION;
   var REVISION_CHANGES = {
@@ -119,24 +137,10 @@ var __module1__ = (function(__dependency1__, __dependency2__) {
     4: '>= 1.0.0'
   };
   __exports__.REVISION_CHANGES = REVISION_CHANGES;
-  var toString = Object.prototype.toString,
+  var isArray = Utils.isArray,
+      isFunction = Utils.isFunction,
+      toString = Utils.toString,
       objectType = '[object Object]';
-
-  // Sourced from lodash
-  // https://github.com/bestiejs/lodash/blob/master/LICENSE.txt
-  var isFunction = function(value) {
-    return typeof value === 'function';
-  };
-  // fallback for older versions of Chrome and Safari
-  if (isFunction(/x/)) {
-    isFunction = function(value) {
-      return typeof value === 'function' && toString.call(value) === '[object Function]';
-    };
-  }
-
-  function isArray(value) {
-    return (value && typeof value === 'object') ? toString.call(value) === '[object Array]' : false;
-  }
 
   function HandlebarsEnvironment(helpers, partials) {
     this.helpers = helpers || {};
@@ -205,14 +209,12 @@ var __module1__ = (function(__dependency1__, __dependency2__) {
 
       if (isFunction(context)) { context = context.call(this); }
 
-    if (isFunction(context)) { context = context.call(this); }
-
-    if (options.data) {
-      data = createFrame(options.data);
-    }
-    if (!data.root) {
-      data.root = this;
-    }
+      if (options.data) {
+        data = createFrame(options.data);
+      }
+      if (!data.root) {
+        data.root = this;
+      }
 
       if(context && typeof context === 'object') {
         if (isArray(context)) {
@@ -245,6 +247,13 @@ var __module1__ = (function(__dependency1__, __dependency2__) {
     instance.registerHelper('if', function(conditional, options) {
       if (isFunction(conditional)) { conditional = conditional.call(this); }
 
+      if (options.data) {
+        data = createFrame(options.data);
+      }
+      if (!data.root) {
+        data.root = this;
+      }
+
       // Default behavior is to render the positive path if the value is truthy and not empty.
       // The `includeZero` option may be set to treat the condtional as purely not empty based on the
       // behavior of isEmpty. Effectively this determines if 0 is handled by the positive path or negative.
@@ -262,14 +271,15 @@ var __module1__ = (function(__dependency1__, __dependency2__) {
     instance.registerHelper('with', function(context, options) {
       if (isFunction(context)) { context = context.call(this); }
 
-    if (!Utils.isEmpty(context)) {
-      if (options.data && !options.data.root) {
-        options.data = createFrame(options.data);
-        options.data.root = this;
+      if (!Utils.isEmpty(context)) {
+        if (options.data && !options.data.root) {
+          options.data = createFrame(options.data);
+          options.data.root = this;
+        }
+        return options.fn(context);
       }
-      return options.fn(context);
-    }
-  });
+
+    });
 
     instance.registerHelper('log', function(context, options) {
       var level = options.data && options.data.level != null ? parseInt(options.data.level, 10) : 1;
