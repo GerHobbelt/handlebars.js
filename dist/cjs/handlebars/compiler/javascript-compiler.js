@@ -13,13 +13,25 @@ JavaScriptCompiler.prototype = {
   // PUBLIC API: You can override these methods in a subclass to provide
   // alternative compiled forms for name lookup and buffering semantics
   nameLookup: function(parent, name /* , type*/) {
+    var wrap,
+        ret;
+    if (parent.indexOf('depth') === 0) {
+      wrap = true;
+    }
+
     if (/^[0-9]+$/.test(name)) {
-      return parent + "[" + name + "]";
+      ret = parent + "[" + name + "]";
     } else if (JavaScriptCompiler.isValidJavaScriptVariableName(name)) {
-      return parent + "." + name;
+      ret = parent + "." + name;
     }
     else {
-      return parent + "['" + name + "']";
+      ret = parent + "['" + name + "']";
+    }
+
+    if (wrap) {
+      return '(' + parent + ' && ' + ret + ')';
+    } else {
+      return ret;
     }
   },
 
@@ -78,18 +90,17 @@ JavaScriptCompiler.prototype = {
       } else {
         this[opcode.opcode].apply(this, opcode.args);
       }
+
+      // Reset the stripNext flag if it was not set by this operation.
+      if (opcode.opcode !== this.stripNext) {
+        this.stripNext = false;
+      }
     }
 
+    // Flush any trailing content that might be pending.
+    this.pushSource('');
+
     return this.createFunctionContext(asObject);
-  },
-
-  nextOpcode: function() {
-    var opcodes = this.environment.opcodes;
-    return opcodes[this.i + 1];
-  },
-
-  eat: function() {
-    this.i = this.i + 1;
   },
 
   preamble: function() {
@@ -144,7 +155,7 @@ JavaScriptCompiler.prototype = {
     }
 
     if (!this.environment.isSimple) {
-      this.source.push("return buffer;");
+      this.pushSource("return buffer;");
     }
 
     var params = this.isChild ? ["depth0", "data"] : ["Handlebars", "depth0", "helpers", "partials", "data"];
@@ -235,7 +246,7 @@ JavaScriptCompiler.prototype = {
     // Use the options value generated from the invocation
     params[params.length-1] = 'options';
 
-    this.source.push("if (!" + this.lastHelper + ") { " + current + " = blockHelperMissing.call(" + params.join(", ") + "); }");
+    this.pushSource("if (!" + this.lastHelper + ") { " + current + " = blockHelperMissing.call(" + params.join(", ") + "); }");
   },
 
   // [appendContent]
@@ -245,7 +256,28 @@ JavaScriptCompiler.prototype = {
   //
   // Appends the string value of `content` to the current buffer
   appendContent: function(content) {
-    this.source.push(this.appendToBuffer(this.quotedString(content)));
+    if (this.pendingContent) {
+      content = this.pendingContent + content;
+    }
+    if (this.stripNext) {
+      content = content.replace(/^\s+/, '');
+    }
+
+    this.pendingContent = content;
+  },
+
+  // [strip]
+  //
+  // On stack, before: ...
+  // On stack, after: ...
+  //
+  // Removes any trailing whitespace from the prior content node and flags
+  // the next operation for stripping if it is a content node.
+  strip: function() {
+    if (this.pendingContent) {
+      this.pendingContent = this.pendingContent.replace(/\s+$/, '');
+    }
+    this.stripNext = 'strip';
   },
 
   // [append]
@@ -262,9 +294,9 @@ JavaScriptCompiler.prototype = {
     // when we examine local
     this.flushInline();
     var local = this.popStack();
-    this.source.push("if(" + local + " || " + local + " === 0) { " + this.appendToBuffer(local) + " }");
+    this.pushSource("if(" + local + " || " + local + " === 0) { " + this.appendToBuffer(local) + " }");
     if (this.environment.isSimple) {
-      this.source.push("else { " + this.appendToBuffer("''") + " }");
+      this.pushSource("else { " + this.appendToBuffer("''") + " }");
     }
   },
 
@@ -277,7 +309,7 @@ JavaScriptCompiler.prototype = {
   appendEscaped: function() {
     this.context.aliases.escapeExpression = 'this.escapeExpression';
 
-    this.source.push(this.appendToBuffer("escapeExpression(" + this.popStack() + ")"));
+    this.pushSource(this.appendToBuffer("escapeExpression(" + this.popStack() + ")"));
   },
 
   // [getContext]
@@ -501,8 +533,8 @@ JavaScriptCompiler.prototype = {
     var nonHelper = this.nameLookup('depth' + this.lastContext, name, 'context');
     var nextStack = this.nextStack();
 
-    this.source.push('if (' + nextStack + ' = ' + helperName + ') { ' + nextStack + ' = ' + nextStack + '.call(' + helper.callParams + '); }');
-    this.source.push('else { ' + nextStack + ' = ' + nonHelper + '; ' + nextStack + ' = typeof ' + nextStack + ' === functionType ? ' + nextStack + '.call(' + helper.callParams + ') : ' + nextStack + '; }');
+    this.pushSource('if (' + nextStack + ' = ' + helperName + ') { ' + nextStack + ' = ' + nextStack + '.call(' + helper.callParams + '); }');
+    this.pushSource('else { ' + nextStack + ' = ' + nonHelper + '; ' + nextStack + ' = typeof ' + nextStack + ' === functionType ? ' + nextStack + '.call(' + helper.callParams + ') : ' + nextStack + '; }');
   },
 
   // [invokePartial]
@@ -609,7 +641,7 @@ JavaScriptCompiler.prototype = {
 
   register: function(name, val) {
     this.useRegister(name);
-    this.source.push(name + " = " + val + ";");
+    this.pushSource(name + " = " + val + ";");
   },
 
   useRegister: function(name) {
@@ -623,12 +655,23 @@ JavaScriptCompiler.prototype = {
     return this.push(new Literal(item));
   },
 
+  pushSource: function(source) {
+    if (this.pendingContent) {
+      this.source.push(this.appendToBuffer(this.quotedString(this.pendingContent)));
+      this.pendingContent = undefined;
+    }
+
+    if (source) {
+      this.source.push(source);
+    }
+  },
+
   pushStack: function(item) {
     this.flushInline();
 
     var stack = this.incrStack();
     if (item) {
-      this.source.push(stack + " = " + item + ";");
+      this.pushSource(stack + " = " + item + ";");
     }
     this.compileStack.push(stack);
     return stack;
@@ -671,7 +714,7 @@ JavaScriptCompiler.prototype = {
         stack = this.nextStack();
       }
 
-      this.source.push(stack + " = (" + prefix + item + ");");
+      this.pushSource(stack + " = (" + prefix + item + ");");
     }
     return stack;
   },

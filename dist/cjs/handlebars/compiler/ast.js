@@ -1,16 +1,26 @@
 "use strict";
 var Exception = require("../exception")['default'];
 
-function ProgramNode(statements, inverse) {
+function ProgramNode(statements, inverseStrip, inverse) {
   this.type = "program";
   this.statements = statements;
-  if(inverse) { this.inverse = new ProgramNode(inverse); }
+  this.strip = {};
+
+  if(inverse) {
+    this.inverse = new ProgramNode(inverse, inverseStrip);
+    this.strip.right = inverseStrip.left;
+  } else if (inverseStrip) {
+    this.strip.left = inverseStrip.right;
+  }
 }
 
-exports.ProgramNode = ProgramNode;function MustacheNode(rawParams, hash, unescaped) {
+exports.ProgramNode = ProgramNode;function MustacheNode(rawParams, hash, open, strip) {
   this.type = "mustache";
-  this.escaped = !unescaped;
   this.hash = hash;
+  this.strip = strip;
+
+  var escapeFlag = open[3] || open[2];
+  this.escaped = escapeFlag !== '{' && escapeFlag !== '&';
 
   var id = this.id = rawParams[0];
   var params = this.params = rawParams.slice(1);
@@ -29,15 +39,16 @@ exports.ProgramNode = ProgramNode;function MustacheNode(rawParams, hash, unescap
   // pass or at runtime.
 }
 
-exports.MustacheNode = MustacheNode;function PartialNode(partialName, context) {
+exports.MustacheNode = MustacheNode;function PartialNode(partialName, context, strip) {
   this.type         = "partial";
   this.partialName  = partialName;
   this.context      = context;
+  this.strip = strip;
 }
 
 exports.PartialNode = PartialNode;function BlockNode(mustache, program, inverse, close) {
-  if(mustache.id.original !== close.original) {
-    throw new Exception(mustache.id.original + " doesn't match " + close.original);
+  if(mustache.id.original !== close.path.original) {
+    throw new Exception(mustache.id.original + " doesn't match " + close.path.original);
   }
 
   this.type = "block";
@@ -45,7 +56,15 @@ exports.PartialNode = PartialNode;function BlockNode(mustache, program, inverse,
   this.program  = program;
   this.inverse  = inverse;
 
-  if (this.inverse && !this.program) {
+  this.strip = {
+    left: mustache.strip.left,
+    right: close.strip.right
+  };
+
+  (program || inverse).strip.left = mustache.strip.right;
+  (inverse || program).strip.right = close.strip.left;
+
+  if (inverse && !program) {
     this.isInverse = true;
   }
 }

@@ -1,8 +1,6 @@
 "use strict";
 var SafeString = require("./safe-string")['default'];
 
-var isArray = Array.isArray;
-
 var escape = {
   "&": "&amp;",
   "<": "&lt;",
@@ -27,7 +25,27 @@ function extend(obj, value) {
   }
 }
 
-exports.extend = extend;function escapeExpression(string) {
+exports.extend = extend;var toString = Object.prototype.toString;
+exports.toString = toString;
+// Sourced from lodash
+// https://github.com/bestiejs/lodash/blob/master/LICENSE.txt
+var isFunction = function(value) {
+  return typeof value === 'function';
+};
+// fallback for older versions of Chrome and Safari
+if (isFunction(/x/)) {
+  isFunction = function(value) {
+    return typeof value === 'function' && toString.call(value) === '[object Function]';
+  };
+}
+var isFunction;
+exports.isFunction = isFunction;
+var isArray = Array.isArray || function(value) {
+  return (value && typeof value === 'object') ? toString.call(value) === '[object Array]' : false;
+};
+exports.isArray = isArray;
+
+function escapeExpression(string) {
   // don't escape SafeStrings, since they're already safe
   if (string instanceof SafeString) {
     return string.toString();
