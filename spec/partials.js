@@ -1,11 +1,11 @@
-/*global CompilerContext, shouldCompileTo, shouldCompileToWithPartials */
+/*global CompilerContext, Handlebars, handlebarsEnv, shouldCompileTo, shouldCompileToWithPartials, shouldThrow */
 describe('partials', function() {
-  it("basic partials", function() {
-    var string = "Dudes: {{#dudes}}{{> dude}}{{/dudes}}";
-    var partial = "{{name}} ({{url}}) ";
-    var hash = {dudes: [{name: "Yehuda", url: "http://yehuda"}, {name: "Alan", url: "http://alan"}]};
-    shouldCompileToWithPartials(string, [hash, {}, {dude: partial}], true, "Dudes: Yehuda (http://yehuda) Alan (http://alan) ",
-                    "Basic partials output based on current context.");
+  it('basic partials', function() {
+    var string = 'Dudes: {{#dudes}}{{> dude}}{{/dudes}}';
+    var partial = '{{name}} ({{url}}) ';
+    var hash = {dudes: [{name: 'Yehuda', url: 'http://yehuda'}, {name: 'Alan', url: 'http://alan'}]};
+    shouldCompileToWithPartials(string, [hash, {}, {dude: partial}], true, 'Dudes: Yehuda (http://yehuda) Alan (http://alan) ');
+    shouldCompileToWithPartials(string, [hash, {}, {dude: partial},,false], true, 'Dudes: Yehuda (http://yehuda) Alan (http://alan) ');
   });
 
   it("partials with context", function() {
@@ -91,6 +91,9 @@ describe('partials', function() {
     var dude = "{{name}}";
     var hash = {name:"Jeepers", another_dude:"Creepers"};
     shouldCompileToWithPartials(string, [hash, {}, {'shared/dude':dude}], true, "Dudes: Jeepers Creepers", "Partials can use globals or passed");
+
+    handlebarsEnv.unregisterPartial('global_test');
+    equals(handlebarsEnv.partials.global_test, undefined);
   });
 
   it("Multiple partial registration", function() {
@@ -136,5 +139,54 @@ describe('partials', function() {
     var string = "Dudes: {{#dudes}}{{> dude}}{{/dudes}}";
     var partial = "";
     var hash = {dudes: [{name: "Yehuda", url: "http://yehuda"}, {name: "Alan", url: "http://alan"}]};
-    shouldCompileToWithPartials(string, [hash, {}, {dude: partial}], true, "Dudes: ");  });
+    shouldCompileToWithPartials(string, [hash, {}, {dude: partial}], true, "Dudes: ");
+  });
+
+  it("throw on missing partial", function() {
+    var compile = handlebarsEnv.compile;
+    handlebarsEnv.compile = undefined;
+    shouldThrow(function() {
+      shouldCompileTo('{{> dude}}', [{}, {}, {dude: 'fail'}], '');
+    }, Error, /The partial dude could not be compiled/);
+    handlebarsEnv.compile = compile;
+  });
+
+  describe('standalone partials', function() {
+    it("indented partials", function() {
+      var string = "Dudes:\n{{#dudes}}\n  {{>dude}}\n{{/dudes}}";
+      var dude = "{{name}}\n";
+      var hash = {dudes: [{name: "Yehuda", url: "http://yehuda"}, {name: "Alan", url: "http://alan"}]};
+      shouldCompileToWithPartials(string, [hash, {}, {dude: dude}], true,
+            "Dudes:\n  Yehuda\n  Alan\n");
+    });
+    it("nested indented partials", function() {
+      var string = "Dudes:\n{{#dudes}}\n  {{>dude}}\n{{/dudes}}";
+      var dude = "{{name}}\n {{> url}}";
+      var url = "{{url}}!\n";
+      var hash = {dudes: [{name: "Yehuda", url: "http://yehuda"}, {name: "Alan", url: "http://alan"}]};
+      shouldCompileToWithPartials(string, [hash, {}, {dude: dude, url: url}], true,
+            "Dudes:\n  Yehuda\n   http://yehuda!\n  Alan\n   http://alan!\n");
+    });
+  });
+
+  describe('compat mode', function() {
+    it('partials can access parents', function() {
+      var string = 'Dudes: {{#dudes}}{{> dude}}{{/dudes}}';
+      var partial = '{{name}} ({{url}}) {{root}} ';
+      var hash = {root: 'yes', dudes: [{name: 'Yehuda', url: 'http://yehuda'}, {name: 'Alan', url: 'http://alan'}]};
+      shouldCompileToWithPartials(string, [hash, {}, {dude: partial}, true], true, 'Dudes: Yehuda (http://yehuda) yes Alan (http://alan) yes ');
+    });
+    it('partials can access parents without data', function() {
+      var string = 'Dudes: {{#dudes}}{{> dude}}{{/dudes}}';
+      var partial = '{{name}} ({{url}}) {{root}} ';
+      var hash = {root: 'yes', dudes: [{name: 'Yehuda', url: 'http://yehuda'}, {name: 'Alan', url: 'http://alan'}]};
+      shouldCompileToWithPartials(string, [hash, {}, {dude: partial}, true, false], true, 'Dudes: Yehuda (http://yehuda) yes Alan (http://alan) yes ');
+    });
+    it('partials inherit compat', function() {
+      var string = 'Dudes: {{> dude}}';
+      var partial = '{{#dudes}}{{name}} ({{url}}) {{root}} {{/dudes}}';
+      var hash = {root: 'yes', dudes: [{name: 'Yehuda', url: 'http://yehuda'}, {name: 'Alan', url: 'http://alan'}]};
+      shouldCompileToWithPartials(string, [hash, {}, {dude: partial}, true], true, 'Dudes: Yehuda (http://yehuda) yes Alan (http://alan) yes ');
+    });
+  });
 });

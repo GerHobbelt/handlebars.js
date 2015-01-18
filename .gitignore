@@ -4,6 +4,7 @@ vendor
 lib/handlebars/compiler/parser.js
 dist/cjs/
 /tmp/
+/coverage/
 node_modules
 *.sublime-project
 *.sublime-workspace

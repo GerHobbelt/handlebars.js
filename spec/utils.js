@@ -30,8 +30,8 @@ describe('utils', function() {
       equals(Handlebars.Utils.escapeExpression(''), '');
       equals(Handlebars.Utils.escapeExpression(undefined), '');
       equals(Handlebars.Utils.escapeExpression(null), '');
-      equals(Handlebars.Utils.escapeExpression(false), '');
 
+      equals(Handlebars.Utils.escapeExpression(false), 'false');
       equals(Handlebars.Utils.escapeExpression(0), '0');
     });
     it('should handle empty objects', function() {
@@ -54,6 +54,22 @@ describe('utils', function() {
       equals(Handlebars.Utils.isEmpty([1]), false);
       equals(Handlebars.Utils.isEmpty('foo'), false);
       equals(Handlebars.Utils.isEmpty({bar: 1}), false);
+    });
+  });
+
+  describe('#extend', function() {
+    it('should ignore prototype values', function() {
+      function A() {
+        this.a = 1;
+      }
+      A.prototype.b = 4;
+
+      var b = {b: 2};
+
+      Handlebars.Utils.extend(b, new A());
+
+      equals(b.a, 1);
+      equals(b.b, 2);
     });
   });
 });

@@ -28,7 +28,7 @@ ID    [^\s!"#%-,\.\/;->@\[-\^`\{-~]+/{LOOKAHEAD}
 
 %%
 
-[^\x00]*?/("{{")                 {
+[^\x00]*?/("{{")                {
                                    if(yytext.slice(-2) === "\\\\") {
                                      strip(0,1);
                                      this.begin("mu");
@@ -67,14 +67,11 @@ ID    [^\s!"#%-,\.\/;->@\[-\^`\{-~]+/{LOOKAHEAD}
                                   this.begin('raw');
                                   return 'CLOSE_RAW_BLOCK';
                                  }
-<mu>"{{{{"[^\x00]*"}}}}"         {
-                                  yytext = yytext.substr(4, yyleng-8);
-                                  this.popState();
-                                  return 'RAW_BLOCK';
-                                 }
 <mu>"{{"{LEFT_STRIP}?">"         return 'OPEN_PARTIAL';
 <mu>"{{"{LEFT_STRIP}?"#"         return 'OPEN_BLOCK';
 <mu>"{{"{LEFT_STRIP}?"/"         return 'OPEN_ENDBLOCK';
+<mu>"{{"{LEFT_STRIP}?"^"\s*{RIGHT_STRIP}?"}}"        this.popState(); return 'INVERSE';
+<mu>"{{"{LEFT_STRIP}?\s*"else"\s*{RIGHT_STRIP}?"}}"  this.popState(); return 'INVERSE';
 <mu>"{{"{LEFT_STRIP}?"^"         return 'OPEN_INVERSE';
 <mu>"{{"{LEFT_STRIP}?\s*"else"   return 'OPEN_INVERSE';
 <mu>"{{"{LEFT_STRIP}?"{"         return 'OPEN_UNESCAPED';

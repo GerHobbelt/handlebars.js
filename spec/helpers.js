@@ -158,6 +158,22 @@ describe('helpers', function() {
     shouldCompileTo(messageString, [rootMessage, { list: list }], "<p>Nobody&#x27;s here</p>", "the context of an inverse is the parent of the block");
   });
 
+  it('pathed lambas with parameters', function() {
+    var hash = {
+      helper: function() {
+        return 'winning';
+      }
+    };
+    hash.hash = hash;
+    var helpers = {
+      './helper': function() {
+        return 'fail';
+      }
+    };
+    shouldCompileTo('{{./helper 1}}', [hash, helpers], 'winning');
+    shouldCompileTo('{{hash/helper 1}}', [hash, helpers], 'winning');
+  });
+
   describe("helpers hash", function() {
     it("providing a helpers hash", function() {
       shouldCompileTo("Goodbye {{cruel}} {{world}}!", [{cruel: "cruel"}, {world: function() { return "world"; }}], "Goodbye cruel world!",
@@ -192,20 +208,41 @@ describe('helpers', function() {
     });
   });
 
-  it("Multiple global helper registration", function() {
-    var helpers = handlebarsEnv.helpers;
-    handlebarsEnv.helpers = {};
+  describe('registration', function() {
+    it('unregisters', function() {
+      var helpers = handlebarsEnv.helpers;
+      handlebarsEnv.helpers = {};
 
-    handlebarsEnv.registerHelper({
-      'if': helpers['if'],
-      world: function() { return "world!"; },
-      test_helper: function() { return 'found it!'; }
+      handlebarsEnv.registerHelper('foo', function() {
+        return 'fail';
+      });
+      handlebarsEnv.unregisterHelper('foo');
+      equals(handlebarsEnv.helpers.foo, undefined);
     });
 
-    shouldCompileTo(
-      "{{test_helper}} {{#if cruel}}Goodbye {{cruel}} {{world}}!{{/if}}",
-      [{cruel: "cruel"}],
-      "found it! Goodbye cruel world!!");
+    it('allows multiple globals', function() {
+      var helpers = handlebarsEnv.helpers;
+      handlebarsEnv.helpers = {};
+
+      handlebarsEnv.registerHelper({
+        'if': helpers['if'],
+        world: function() { return "world!"; },
+        test_helper: function() { return 'found it!'; }
+      });
+
+      shouldCompileTo(
+        "{{test_helper}} {{#if cruel}}Goodbye {{cruel}} {{world}}!{{/if}}",
+        [{cruel: "cruel"}],
+        "found it! Goodbye cruel world!!");
+    });
+    it('fails with multiple and args', function() {
+      shouldThrow(function() {
+        handlebarsEnv.registerHelper({
+          world: function() { return "world!"; },
+          test_helper: function() { return 'found it!'; }
+        }, {});
+      }, Error, 'Arg not supported with multiple helpers');
+    });
   });
 
   it("decimal number literals work", function() {
@@ -402,6 +439,21 @@ describe('helpers', function() {
       };
 
       shouldCompileTo(string, [context, helpers], "Hello <a>world</a>");
+    });
+
+    it("if a value is not found, custom helperMissing is used", function() {
+      var string = "{{hello}} {{link_to}}";
+      var context = { hello: "Hello", world: "world" };
+
+      var helpers = {
+        helperMissing: function(options) {
+          if(options.name === "link_to") {
+            return new Handlebars.SafeString("<a>winning</a>");
+          }
+        }
+      };
+
+      shouldCompileTo(string, [context, helpers], "Hello <a>winning</a>");
     });
   });
 

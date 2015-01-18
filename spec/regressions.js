@@ -24,7 +24,19 @@ describe('Regressions', function() {
   });
 
   it("bug reported by @fat where lambdas weren't being properly resolved", function() {
-    var string = "<strong>This is a slightly more complicated {{thing}}.</strong>.\n{{! Just ignore this business. }}\nCheck this out:\n{{#hasThings}}\n<ul>\n{{#things}}\n<li class={{className}}>{{word}}</li>\n{{/things}}</ul>.\n{{/hasThings}}\n{{^hasThings}}\n\n<small>Nothing to check out...</small>\n{{/hasThings}}";
+    var string = '<strong>This is a slightly more complicated {{thing}}.</strong>.\n'
+        + '{{! Just ignore this business. }}\n'
+        + 'Check this out:\n'
+        + '{{#hasThings}}\n'
+        + '<ul>\n'
+        + '{{#things}}\n'
+        + '<li class={{className}}>{{word}}</li>\n'
+        + '{{/things}}</ul>.\n'
+        + '{{/hasThings}}\n'
+        + '{{^hasThings}}\n'
+        + '\n'
+        + '<small>Nothing to check out...</small>\n'
+        + '{{/hasThings}}';
     var data = {
       thing: function() {
         return "blah";
@@ -39,7 +51,13 @@ describe('Regressions', function() {
       }
     };
 
-    var output = "<strong>This is a slightly more complicated blah.</strong>.\n\nCheck this out:\n\n<ul>\n\n<li class=one>@fat</li>\n\n<li class=two>@dhg</li>\n\n<li class=three>@sayrer</li>\n</ul>.\n\n";
+    var output = '<strong>This is a slightly more complicated blah.</strong>.\n'
+        + 'Check this out:\n'
+        + '<ul>\n'
+        + '<li class=one>@fat</li>\n'
+        + '<li class=two>@dhg</li>\n'
+        + '<li class=three>@sayrer</li>\n'
+        + '</ul>.\n';
     shouldCompileTo(string, data, output);
   });
 
@@ -112,19 +130,19 @@ describe('Regressions', function() {
     shouldCompileTo(string, data, "Hello Chris. You have just won $10000! Well, $6000, after taxes.", "the hello world mustache example works");
   });
 
-  it("Passing falsy values to Handlebars.compile throws an error", function() {
-    shouldThrow(function() {
-      CompilerContext.compile(null);
-    }, Error, 'You must pass a string or Handlebars AST to Handlebars.precompile. You passed null');
+  it('GH-731: zero context rendering', function() {
+    shouldCompileTo('{{#foo}} This is {{bar}} ~ {{/foo}}', {foo: 0, bar: 'OK'}, ' This is  ~ ');
   });
 
-  if (Handlebars.AST) {
-    it("can pass through an already-compiled AST via compile/precompile", function() {
-      equal(Handlebars.compile(new Handlebars.AST.ProgramNode([ new Handlebars.AST.ContentNode("Hello")]))(), 'Hello');
-    });
+  it('GH-820: zero pathed rendering', function() {
+    shouldCompileTo('{{foo.bar}}', {foo: 0}, '');
+  });
 
-    it("can pass through an empty string", function() {
-      equal(Handlebars.compile('')(), '');
-    });
-  }
+  it('GH-837: undefined values for helpers', function() {
+    var helpers = {
+      str: function(value) { return value + ''; }
+    };
+
+    shouldCompileTo('{{str bar.baz}}', [{}, helpers], 'undefined');
+  });
 });
