@@ -98,8 +98,7 @@ describe('builtin helpers', function() {
       var expected2 = "2. GOODBYE! &lt;b&gt;#1&lt;/b&gt;. goodbye! cruel world!";
 
       equals(actual === expected1 || actual === expected2, true, "each with object argument iterates over the contents when not empty");
-      shouldCompileTo(string, {goodbyes: [], world: "world"}, "cruel world!",
-                      "each with object argument ignores the contents when empty");
+      shouldCompileTo(string, {goodbyes: {}, world: 'world'}, 'cruel world!');
     });
 
     it("each with @index", function() {
@@ -120,6 +119,16 @@ describe('builtin helpers', function() {
       var result = template(hash);
 
       equal(result, "0. goodbye! 0 1 2 After 0 1. Goodbye! 0 1 2 After 1 2. GOODBYE! 0 1 2 After 2 cruel world!", "The @index variable is used");
+    });
+
+    it('each with block params', function() {
+      var string = '{{#each goodbyes as |value index|}}{{index}}. {{value.text}}! {{#each ../goodbyes as |childValue childIndex|}} {{index}} {{childIndex}}{{/each}} After {{index}} {{/each}}{{index}}cruel {{world}}!';
+      var hash   = {goodbyes: [{text: 'goodbye'}, {text: 'Goodbye'}], world: 'world'};
+
+      var template = CompilerContext.compile(string);
+      var result = template(hash);
+
+      equal(result, '0. goodbye!  0 0 0 1 After 0 1. Goodbye!  1 0 1 1 After 1 cruel world!');
     });
 
     it("each object with @index", function() {
@@ -173,6 +182,16 @@ describe('builtin helpers', function() {
       equal(result, "GOODBYE! cruel world!", "The @last variable is used");
     });
 
+    it("each object with @last", function() {
+      var string = "{{#each goodbyes}}{{#if @last}}{{text}}! {{/if}}{{/each}}cruel {{world}}!";
+      var hash   = {goodbyes: {'foo': {text: "goodbye"}, bar: {text: "Goodbye"}}, world: "world"};
+
+      var template = CompilerContext.compile(string);
+      var result = template(hash);
+
+      equal(result, "Goodbye! cruel world!", "The @last variable is used");
+    });
+
     it("each with nested @last", function() {
       var string = "{{#each goodbyes}}({{#if @last}}{{text}}! {{/if}}{{#each ../goodbyes}}{{#if @last}}{{text}}!{{/if}}{{/each}}{{#if @last}} {{text}}!{{/if}}) {{/each}}cruel {{world}}!";
       var hash   = {goodbyes: [{text: "goodbye"}, {text: "Goodbye"}, {text: "GOODBYE"}], world: "world"};
@@ -218,13 +237,16 @@ describe('builtin helpers', function() {
       return;
     }
 
-    var info,
+    var log,
+        info,
         error;
     beforeEach(function() {
+      log = console.log;
       info = console.info;
       error = console.error;
     });
     afterEach(function() {
+      console.log = log;
       console.info = info;
       console.error = error;
     });
@@ -257,15 +279,22 @@ describe('builtin helpers', function() {
       equals(3, levelArg);
       equals("whee", logArg);
     });
-    it('should not output to console', function() {
+    it('should output to info', function() {
       var string = "{{log blah}}";
       var hash   = { blah: "whee" };
+      var called;
 
-      console.info = function() {
-        throw new Error();
+      console.info = function(log) {
+        equals("whee", log);
+        called = true;
+      };
+      console.log = function(log) {
+        equals("whee", log);
+        called = true;
       };
 
-      shouldCompileTo(string, hash, "", "log should not display");
+      shouldCompileTo(string, hash, "");
+      equals(true, called);
     });
     it('should log at data level', function() {
       var string = "{{log blah}}";

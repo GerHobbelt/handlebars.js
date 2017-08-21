@@ -12,7 +12,7 @@ function strip(start, end) {
 LEFT_STRIP    "~"
 RIGHT_STRIP   "~"
 
-LOOKAHEAD           [=~}\s\/.)]
+LOOKAHEAD           [=~}\s\/.)|]
 LITERAL_LOOKAHEAD   [~}\s)]
 
 /*
@@ -56,7 +56,10 @@ ID    [^\s!"#%-,\.\/;->@\[-\^`\{-~]+/{LOOKAHEAD}
                                  }
 <raw>[^\x00]*?/("{{{{/")         { return 'CONTENT'; }
 
-<com>[\s\S]*?"--}}"              strip(0,4); this.popState(); return 'COMMENT';
+<com>[\s\S]*?"--"{RIGHT_STRIP}?"}}" {
+  this.popState();
+  return 'COMMENT';
+}
 
 <mu>"("                          return 'OPEN_SEXPR';
 <mu>")"                          return 'CLOSE_SEXPR';
@@ -73,11 +76,18 @@ ID    [^\s!"#%-,\.\/;->@\[-\^`\{-~]+/{LOOKAHEAD}
 <mu>"{{"{LEFT_STRIP}?"^"\s*{RIGHT_STRIP}?"}}"        this.popState(); return 'INVERSE';
 <mu>"{{"{LEFT_STRIP}?\s*"else"\s*{RIGHT_STRIP}?"}}"  this.popState(); return 'INVERSE';
 <mu>"{{"{LEFT_STRIP}?"^"         return 'OPEN_INVERSE';
-<mu>"{{"{LEFT_STRIP}?\s*"else"   return 'OPEN_INVERSE';
+<mu>"{{"{LEFT_STRIP}?\s*"else"   return 'OPEN_INVERSE_CHAIN';
 <mu>"{{"{LEFT_STRIP}?"{"         return 'OPEN_UNESCAPED';
 <mu>"{{"{LEFT_STRIP}?"&"         return 'OPEN';
-<mu>"{{!--"                      this.popState(); this.begin('com');
-<mu>"{{!"[\s\S]*?"}}"            strip(3,5); this.popState(); return 'COMMENT';
+<mu>"{{"{LEFT_STRIP}?"!--" {
+  this.unput(yytext);
+  this.popState();
+  this.begin('com');
+}
+<mu>"{{"{LEFT_STRIP}?"!"[\s\S]*?"}}" {
+  this.popState();
+  return 'COMMENT';
+}
 <mu>"{{"{LEFT_STRIP}?            return 'OPEN';
 
 <mu>"="                          return 'EQUALS';
@@ -93,6 +103,8 @@ ID    [^\s!"#%-,\.\/;->@\[-\^`\{-~]+/{LOOKAHEAD}
 <mu>"true"/{LITERAL_LOOKAHEAD}   return 'BOOLEAN';
 <mu>"false"/{LITERAL_LOOKAHEAD}  return 'BOOLEAN';
 <mu>\-?[0-9]+(?:\.[0-9]+)?/{LITERAL_LOOKAHEAD} return 'NUMBER';
+<mu>"as"\s+"|"                   return 'OPEN_BLOCK_PARAMS';
+<mu>"|"                          return 'CLOSE_BLOCK_PARAMS';
 
 <mu>{ID}                         return 'ID';
 

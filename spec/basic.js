@@ -1,4 +1,4 @@
-/*global CompilerContext, Handlebars, beforeEach, shouldCompileTo */
+/*global CompilerContext, Handlebars, beforeEach, shouldCompileTo, shouldThrow */
 global.handlebarsEnv = null;
 
 beforeEach(function() {
@@ -33,6 +33,13 @@ describe("basic context", function() {
     shouldCompileTo("{{! Goodbye}}Goodbye\n{{cruel}}\n{{world}}!",
       {cruel: "cruel", world: "world"}, "Goodbye\ncruel\nworld!",
       "comments are ignored");
+
+    shouldCompileTo('    {{~! comment ~}}      blah', {}, 'blah');
+    shouldCompileTo('    {{~!-- long-comment --~}}      blah', {}, 'blah');
+    shouldCompileTo('    {{! comment ~}}      blah', {}, '    blah');
+    shouldCompileTo('    {{!-- long-comment --~}}      blah', {}, '    blah');
+    shouldCompileTo('    {{~! comment}}      blah', {}, '      blah');
+    shouldCompileTo('    {{~!-- long-comment --}}      blah', {}, '      blah');
   });
 
   it("boolean", function() {
@@ -137,12 +144,12 @@ describe("basic context", function() {
   });
   it("pathed block functions without context argument", function() {
     shouldCompileTo("{{#foo.awesome}}inner{{/foo.awesome}}",
-        {foo: {awesome: function(options) { return this; }}},
+        {foo: {awesome: function() { return this; }}},
         "inner", "block functions are called with options");
   });
   it("depthed block functions without context argument", function() {
     shouldCompileTo("{{#with value}}{{#../awesome}}inner{{/../awesome}}{{/with}}",
-        {value: true, awesome: function(options) { return this; }},
+        {value: true, awesome: function() { return this; }},
         "inner", "block functions are called with options");
   });
 
@@ -221,5 +228,34 @@ describe("basic context", function() {
     shouldThrow(function() {
       CompilerContext.compile(string);
     }, Error);
+  });
+
+  it('pass string literals', function() {
+    shouldCompileTo('{{"foo"}}', {}, '');
+    shouldCompileTo('{{"foo"}}', { foo: 'bar' }, 'bar');
+    shouldCompileTo('{{#"foo"}}{{.}}{{/"foo"}}', { foo: ['bar', 'baz'] }, 'barbaz');
+  });
+
+  it('pass number literals', function() {
+    shouldCompileTo('{{12}}', {}, '');
+    shouldCompileTo('{{12}}', { '12': 'bar' }, 'bar');
+    shouldCompileTo('{{12.34}}', {}, '');
+    shouldCompileTo('{{12.34}}', { '12.34': 'bar' }, 'bar');
+    shouldCompileTo('{{12.34 1}}', { '12.34': function(arg) { return 'bar' + arg; } }, 'bar1');
+  });
+
+  it('pass boolean literals', function() {
+    shouldCompileTo('{{true}}', {}, '');
+    shouldCompileTo('{{true}}', { '': 'foo' }, '');
+    shouldCompileTo('{{false}}', { 'false': 'foo' }, 'foo');
+  });
+
+  it('should handle literals in subexpression', function() {
+    var helpers = {
+      foo: function(arg) {
+        return arg;
+      }
+    };
+    shouldCompileTo('{{foo (false)}}', [{ 'false': function() { return 'bar'; } }, helpers], 'bar');
   });
 });
