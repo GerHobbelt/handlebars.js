@@ -204,6 +204,25 @@ describe('Regressions', function() {
     shouldCompileTo('{{#each array}}{{@index}}{{.}}{{/each}}', {array: array}, '1foo3bar');
   });
 
+  it('GH-1093: Undefined helper context', function() {
+    var obj = {foo: undefined, bar: 'bat'};
+    var helpers = {
+      helper: function() {
+        // It's valid to execute a block against an undefined context, but
+        // helpers can not do so, so we expect to have an empty object here;
+        for (var name in this) {
+          if (this.hasOwnProperty(name)) {
+            return 'found';
+          }
+        }
+        // And to make IE happy, check for the known string as length is not enumerated.
+        return (this == 'bat' ? 'found' : 'not');
+      }
+    };
+
+    shouldCompileTo('{{#each obj}}{{{helper}}}{{.}}{{/each}}', [{obj: obj}, helpers], 'notfoundbat');
+  });
+
   it('should support multiple levels of inline partials', function() {
     var string = '{{#> layout}}{{#*inline "subcontent"}}subcontent{{/inline}}{{/layout}}';
     var partials = {
@@ -219,5 +238,13 @@ describe('Regressions', function() {
       layout: '{{#> doctype}}{{#*inline "content"}}layout{{#> subcontent}}subcontent{{/subcontent}}{{/inline}}{{/doctype}}'
     };
     shouldCompileToWithPartials(string, [{}, {}, partials], true, 'doctypelayoutsubcontent');
+  });
+  it('GH-1099: should support greater than 3 nested levels of inline partials', function() {
+    var string = '{{#> layout}}Outer{{/layout}}';
+    var partials = {
+      layout: '{{#> inner}}Inner{{/inner}}{{> @partial-block }}',
+      inner: ''
+    };
+    shouldCompileToWithPartials(string, [{}, {}, partials], true, 'Outer');
   });
 });
