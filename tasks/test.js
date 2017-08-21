@@ -1,17 +1,21 @@
 var childProcess = require('child_process'),
-    fs = require('fs');
+    fs = require('fs'),
+    os = require('os');
 
 module.exports = function(grunt) {
   grunt.registerTask('test:bin', function() {
     var done = this.async();
 
-    childProcess.exec('./bin/handlebars -a spec/artifacts/empty.handlebars', function(err, stdout) {
+    // On Windows, the executable handlebars.js file cannot be run directly
+    var prefix = os.type().match(/^Windows/) ? process.argv[0] : '';
+    childProcess.exec(prefix + ' ./bin/handlebars -a spec/artifacts/empty.handlebars', function(err, stdout) {
       if (err) {
         throw err;
       }
 
-      var expected = fs.readFileSync('./spec/expected/empty.amd.js');
-      if (stdout.toString() !== expected.toString()) {
+      var expected = fs.readFileSync('./spec/expected/empty.amd.js').toString().replace(/\r\n/g, '\n');
+
+      if (stdout.toString() !== expected) {
         throw new Error('Expected binary output differed:\n\n"' + stdout + '"\n\n"' + expected + '"');
       }
 
@@ -32,7 +36,7 @@ module.exports = function(grunt) {
   grunt.registerTask('test:cov', function() {
     var done = this.async();
 
-    var runner = childProcess.fork('node_modules/.bin/istanbul', ['cover', '--source-map', '--', './spec/env/runner.js'], {stdio: 'inherit'});
+    var runner = childProcess.fork('node_modules/istanbul/lib/cli.js', ['cover', '--source-map', '--', './spec/env/runner.js'], {stdio: 'inherit'});
     runner.on('close', function(code) {
       if (code != 0) {
         grunt.fatal(code + ' tests failed');
@@ -55,7 +59,7 @@ module.exports = function(grunt) {
   grunt.registerTask('test:check-cov', function() {
     var done = this.async();
 
-    var runner = childProcess.fork('node_modules/.bin/istanbul', ['check-coverage', '--statements', '100', '--functions', '100', '--branches', '100', '--lines 100'], {stdio: 'inherit'});
+    var runner = childProcess.fork('node_modules/istanbul/lib/cli.js', ['check-coverage', '--statements', '100', '--functions', '100', '--branches', '100', '--lines 100'], {stdio: 'inherit'});
     runner.on('close', function(code) {
       if (code != 0) {
         grunt.fatal('Coverage check failed: ' + code);
