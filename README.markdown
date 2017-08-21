@@ -4,10 +4,8 @@
 Handlebars.js
 =============
 
-Handlebars.js is an extension to the [Mustache templating
-language](http://mustache.github.com/) created by Chris Wanstrath.
-Handlebars.js and Mustache are both logicless templating languages that
-keep the view and the code separated like we all know they should be.
+Handlebars provides the power necessary to let you build **semantic templates** effectively with no frustration.
+Handlebars is largely compatible with Mustache templates. In most cases it is possible to swap out Mustache with Handlebars and continue using your current templates.
 
 Checkout the official Handlebars docs site at
 [http://www.handlebarsjs.com](http://www.handlebarsjs.com) and the live demo at [http://tryhandlebarsjs.com/](http://tryhandlebarsjs.com/).
@@ -70,6 +68,7 @@ Block expressions have the same syntax as mustache sections but should not be co
 There are a few Mustache behaviors that Handlebars does not implement.
 - Handlebars deviates from Mustache slightly in that it does not perform recursive lookup by default. The compile time `compat` flag must be set to enable this functionality. Users should note that there is a performance cost for enabling this flag. The exact cost varies by template, but it's recommended that performance sensitive operations should avoid this mode and instead opt for explicit path references.
 - The optional Mustache-style lambdas are not supported. Instead Handlebars provides its own lambda resolution that follows the behaviors of helpers.
+- Handlebars does not allow space between the opening `{{` and a command character such as `#`, `/` or `>`. The command character must immediately follow the braces, so for example `{{> partial }}` is allowed but `{{ > partial }}` is not.
 - Alternative delimiters are not supported.
 
 
@@ -152,6 +151,7 @@ Handlebars in the Wild
 * [DOMBars](https://github.com/blakeembrey/dombars) is a DOM-based templating engine built on the Handlebars parser and runtime **DEPRECATED**
 * [promised-handlebars](https://github.com/nknapp/promised-handlebars) is a wrapper for Handlebars that allows helpers to return Promises.
 * [just-handlebars-helpers](https://github.com/leapfrogtechnology/just-handlebars-helpers) A fully tested lightweight package with common Handlebars helpers.
+* [incremental-bars](https://github.com/atomictag/incremental-bars) adds support for [incremental-dom](https://github.com/google/incremental-dom) as template target to Handlebars.
 
 External Resources
 ------------------

@@ -22,17 +22,13 @@ module.exports = function(grunt) {
       dist: {
         options: {
           processContent: function(content) {
-            return grunt.template.process('/**!\n\n @license\n <%= pkg.name %> v<%= pkg.version %>\n\n<%= grunt.file.read("LICENSE") %>\n*/\n')
-                + content;
+            return grunt.template.process('/**!\n\n @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&dn=expat.txt Expat\n <%= pkg.name %> v<%= pkg.version %>\n\n<%= grunt.file.read("LICENSE") %>\n*/\n')
+                + content
+		+ '\n// @license-end\n';
           }
         },
         files: [
           {expand: true, cwd: 'dist/', src: ['*.js'], dest: 'dist/'}
-        ]
-      },
-      cdnjs: {
-        files: [
-          {expand: true, cwd: 'dist/', src: ['*.js'], dest: 'dist/cdnjs'}
         ]
       },
       components: {
@@ -49,22 +45,7 @@ module.exports = function(grunt) {
         loose: ['es6.modules'],
         auxiliaryCommentBefore: 'istanbul ignore next'
       },
-      amd: {
-        options: {
-          modules: 'amd'
-        },
-        files: [{
-          expand: true,
-          cwd: 'lib/',
-          src: '**/!(index).js',
-          dest: 'dist/amd/'
-        }]
-      },
-
       cjs: {
-        options: {
-          modules: 'common'
-        },
         files: [{
           cwd: 'lib/',
           expand: true,
@@ -76,12 +57,6 @@ module.exports = function(grunt) {
     webpack: {
       options: {
         context: __dirname,
-        module: {
-          loaders: [
-            // the optional 'runtime' transformer tells babel to require the runtime instead of inlining it.
-            { test: /\.jsx?$/, exclude: /node_modules/, loader: 'babel-loader?optional=runtime&loose=es6.modules&auxiliaryCommentBefore=istanbul%20ignore%20next' }
-          ]
-        },
         output: {
           path: 'dist/',
           library: 'Handlebars',
@@ -89,34 +64,15 @@ module.exports = function(grunt) {
         }
       },
       handlebars: {
-        entry: './lib/handlebars.js',
+        entry: './dist/cjs/handlebars.js',
         output: {
           filename: 'handlebars.js'
         }
       },
       runtime: {
-        entry: './lib/handlebars.runtime.js',
+        entry: './dist/cjs/handlebars.runtime.js',
         output: {
           filename: 'handlebars.runtime.js'
-        }
-      }
-    },
-
-    requirejs: {
-      options: {
-        optimize: 'none',
-        baseUrl: 'dist/amd/'
-      },
-      dist: {
-        options: {
-          name: 'handlebars',
-          out: 'dist/handlebars.amd.js'
-        }
-      },
-      runtime: {
-        options: {
-          name: 'handlebars.runtime',
-          out: 'dist/handlebars.runtime.amd.js'
         }
       }
     },
@@ -160,7 +116,7 @@ module.exports = function(grunt) {
       all: {
         options: {
           build: process.env.TRAVIS_JOB_ID,
-          urls: ['http://localhost:9999/spec/?headless=true', 'http://localhost:9999/spec/amd.html?headless=true'],
+          urls: ['http://localhost:9999/spec/?headless=true'],
           detailedError: true,
           concurrency: 4,
           browsers: [
@@ -176,11 +132,12 @@ module.exports = function(grunt) {
       sanity: {
         options: {
           build: process.env.TRAVIS_JOB_ID,
-          urls: ['http://localhost:9999/spec/umd.html?headless=true', 'http://localhost:9999/spec/amd-runtime.html?headless=true', 'http://localhost:9999/spec/umd-runtime.html?headless=true'],
+          urls: ['http://localhost:9999/spec/umd.html?headless=true', 'http://localhost:9999/spec/umd-runtime.html?headless=true'],
           detailedError: true,
           concurrency: 2,
           browsers: [
-            {browserName: 'chrome'}
+            {browserName: 'chrome'},
+            {browserName: 'internet explorer', version: 10, platform: 'Windows 8'}
           ]
         }
       }
@@ -193,7 +150,7 @@ module.exports = function(grunt) {
         },
 
         files: ['src/*', 'lib/**/*.js', 'spec/**/*.js'],
-        tasks: ['build', 'amd', 'tests', 'test']
+        tasks: ['build', 'tests', 'test']
       }
     }
   });
@@ -205,19 +162,17 @@ module.exports = function(grunt) {
                     'node',
                     'globals']);
 
-  this.registerTask('amd', ['babel:amd', 'requirejs']);
   this.registerTask('node', ['babel:cjs']);
   this.registerTask('globals', ['webpack']);
   this.registerTask('tests', ['concat:tests']);
 
-  this.registerTask('release', 'Build final packages', ['eslint', 'amd', 'uglify', 'test:min', 'copy:dist', 'copy:components', 'copy:cdnjs']);
+  this.registerTask('release', 'Build final packages', ['eslint', 'uglify', 'test:min', 'copy:dist', 'copy:components']);
 
   // Load tasks from npm
   grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-contrib-copy');
-  grunt.loadNpmTasks('grunt-contrib-requirejs');
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-babel');

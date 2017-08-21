@@ -42,7 +42,7 @@ The `grunt dev` implements watching for tests and allows for in browser testing 
 If you notice any problems, please report them to the GitHub issue tracker at
 [http://github.com/wycats/handlebars.js/issues](http://github.com/wycats/handlebars.js/issues).
 
-##Running Tests
+## Running Tests
 
 To run tests locally, first install all dependencies.
 ```sh
@@ -96,4 +96,4 @@ After this point the handlebars site needs to be updated to point to the new ver
 [generator-release]: https://github.com/walmartlabs/generator-release
 [pull-request]: https://github.com/wycats/handlebars.js/pull/new/master
 [issue]: https://github.com/wycats/handlebars.js/issues/new
-[jsfiddle]: https://jsfiddle.net/9D88g/47/
+[jsfiddle]: https://jsfiddle.net/9D88g/113/

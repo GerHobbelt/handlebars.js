@@ -278,6 +278,17 @@ describe('Regressions', function() {
     shouldCompileTo(string, { listOne: ['a'], listTwo: ['b']}, 'ab', '');
   });
 
+  it('should allow hash with protected array names', function() {
+    var obj = {array: [1], name: 'John'};
+    var helpers = {
+      helpa: function(options) {
+        return options.hash.length;
+      }
+    };
+
+    shouldCompileTo('{{helpa length="foo"}}', [obj, helpers], 'foo');
+  });
+
   it('GH-1319: "unless" breaks when "each" value equals "null"', function() {
     var string = '{{#each list}}{{#unless ./prop}}parent={{../value}} {{/unless}}{{/each}}';
     shouldCompileTo(string, { value: 'parent', list: [ null, 'a'] }, 'parent=parent parent=parent ', '');
