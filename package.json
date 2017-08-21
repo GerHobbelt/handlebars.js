@@ -1,7 +1,7 @@
 {
   "name": "handlebars",
   "barename": "handlebars",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "Handlebars provides the power necessary to let you build semantic templates effectively with no frustration",
   "homepage": "http://www.handlebarsjs.com/",
   "keywords": [
@@ -42,7 +42,6 @@
     "grunt-contrib-concat": "0.x",
     "grunt-contrib-connect": "0.x",
     "grunt-contrib-copy": "0.x",
-    "grunt-contrib-jshint": "0.x",
     "grunt-contrib-requirejs": "0.x",
     "grunt-contrib-uglify": "0.x",
     "grunt-contrib-watch": "0.x",
