@@ -94,11 +94,11 @@ hash
   ;
 
 hashSegment
-  : ID EQUALS param -> new yy.HashPair($1, $3, yy.locInfo(@$))
+  : ID EQUALS param -> new yy.HashPair(yy.id($1), $3, yy.locInfo(@$))
   ;
 
 blockParams
-  : OPEN_BLOCK_PARAMS ID+ CLOSE_BLOCK_PARAMS -> $2
+  : OPEN_BLOCK_PARAMS ID+ CLOSE_BLOCK_PARAMS -> yy.id($2)
   ;
 
 helperName
@@ -107,6 +107,8 @@ helperName
   | STRING -> new yy.StringLiteral($1, yy.locInfo(@$))
   | NUMBER -> new yy.NumberLiteral($1, yy.locInfo(@$))
   | BOOLEAN -> new yy.BooleanLiteral($1, yy.locInfo(@$))
+  | UNDEFINED -> new yy.UndefinedLiteral(yy.locInfo(@$))
+  | NULL -> new yy.NullLiteral(yy.locInfo(@$))
   ;
 
 partialName
@@ -123,6 +125,6 @@ path
   ;
 
 pathSegments
-  : pathSegments SEP ID { $1.push({part: $3, separator: $2}); $$ = $1; }
-  | ID -> [{part: $1}]
+  : pathSegments SEP ID { $1.push({part: yy.id($3), original: $3, separator: $2}); $$ = $1; }
+  | ID -> [{part: yy.id($1), original: $1}]
   ;
