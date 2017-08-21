@@ -1,1 +1,2 @@
-export default handlebars;
+exports.__esModule = true;
+exports['default'] = handlebars;

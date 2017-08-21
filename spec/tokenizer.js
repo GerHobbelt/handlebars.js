@@ -214,6 +214,10 @@ describe('Tokenizer', function() {
     shouldMatchTokens(result, ['OPEN_PARTIAL', 'ID', 'SEP', 'ID', 'SEP', 'ID', 'CLOSE']);
   });
 
+  it('tokenizes partial block declarations', function() {
+    var result = tokenize('{{#> foo}}');
+    shouldMatchTokens(result, ['OPEN_PARTIAL_BLOCK', 'ID', 'CLOSE']);
+  });
   it('tokenizes a comment as "COMMENT"', function() {
     var result = tokenize('foo {{! this is a comment }} bar {{ baz }}');
     shouldMatchTokens(result, ['CONTENT', 'COMMENT', 'CONTENT', 'OPEN', 'ID', 'CLOSE']);
@@ -235,6 +239,15 @@ describe('Tokenizer', function() {
   it('tokenizes open and closing blocks as OPEN_BLOCK, ID, CLOSE ..., OPEN_ENDBLOCK ID CLOSE', function() {
     var result = tokenize('{{#foo}}content{{/foo}}');
     shouldMatchTokens(result, ['OPEN_BLOCK', 'ID', 'CLOSE', 'CONTENT', 'OPEN_ENDBLOCK', 'ID', 'CLOSE']);
+  });
+
+  it('tokenizes directives', function() {
+    shouldMatchTokens(
+        tokenize('{{#*foo}}content{{/foo}}'),
+        ['OPEN_BLOCK', 'ID', 'CLOSE', 'CONTENT', 'OPEN_ENDBLOCK', 'ID', 'CLOSE']);
+    shouldMatchTokens(
+        tokenize('{{*foo}}'),
+        ['OPEN', 'ID', 'CLOSE']);
   });
 
   it('tokenizes inverse sections as "INVERSE"', function() {
@@ -264,7 +277,7 @@ describe('Tokenizer', function() {
   });
 
   it('tokenizes mustaches with String params as "OPEN ID ID STRING CLOSE"', function() {
-    var result = tokenize('{{ foo bar \'baz\' }}');
+    var result = tokenize('{{ foo bar \"baz\" }}');
     shouldMatchTokens(result, ['OPEN', 'ID', 'ID', 'STRING', 'CLOSE']);
     shouldBeToken(result[3], 'STRING', 'baz');
   });

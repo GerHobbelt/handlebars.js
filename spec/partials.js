@@ -41,6 +41,28 @@ describe('partials', function() {
                     'Partials can be passed a context');
   });
 
+  it('partials with no context', function() {
+    var partial = '{{name}} ({{url}}) ';
+    var hash = {dudes: [{name: 'Yehuda', url: 'http://yehuda'}, {name: 'Alan', url: 'http://alan'}]};
+    shouldCompileToWithPartials(
+        'Dudes: {{#dudes}}{{>dude}}{{/dudes}}',
+        [hash, {}, {dude: partial}, {explicitPartialContext: true}],
+        true,
+        'Dudes:  ()  () ');
+    shouldCompileToWithPartials(
+        'Dudes: {{#dudes}}{{>dude name="foo"}}{{/dudes}}',
+        [hash, {}, {dude: partial}, {explicitPartialContext: true}],
+        true,
+        'Dudes: foo () foo () ');
+  });
+
+  it('partials with string context', function() {
+    var string = 'Dudes: {{>dude "dudes"}}';
+    var partial = '{{.}}';
+    var hash = {};
+    shouldCompileToWithPartials(string, [hash, {}, {dude: partial}], true, 'Dudes: dudes');
+  });
+
   it('partials with undefined context', function() {
     var string = 'Dudes: {{>dude dudes}}';
     var partial = '{{foo}} Empty';
@@ -189,6 +211,106 @@ describe('partials', function() {
     handlebarsEnv.compile = compile;
   });
 
+  describe('partial blocks', function() {
+    it('should render partial block as default', function() {
+      shouldCompileToWithPartials(
+        '{{#> dude}}success{{/dude}}',
+        [{}, {}, {}],
+        true,
+        'success');
+    });
+    it('should execute default block with proper context', function() {
+      shouldCompileToWithPartials(
+        '{{#> dude context}}{{value}}{{/dude}}',
+        [{context: {value: 'success'}}, {}, {}],
+        true,
+        'success');
+    });
+    it('should propagate block parameters to default block', function() {
+      shouldCompileToWithPartials(
+        '{{#with context as |me|}}{{#> dude}}{{me.value}}{{/dude}}{{/with}}',
+        [{context: {value: 'success'}}, {}, {}],
+        true,
+        'success');
+    });
+
+    it('should not use partial block if partial exists', function() {
+      shouldCompileToWithPartials(
+        '{{#> dude}}fail{{/dude}}',
+        [{}, {}, {dude: 'success'}],
+        true,
+        'success');
+    });
+
+    it('should render block from partial', function() {
+      shouldCompileToWithPartials(
+        '{{#> dude}}success{{/dude}}',
+        [{}, {}, {dude: '{{> @partial-block }}'}],
+        true,
+        'success');
+    });
+    it('should render block from partial with context', function() {
+      shouldCompileToWithPartials(
+        '{{#> dude}}{{value}}{{/dude}}',
+        [{context: {value: 'success'}}, {}, {dude: '{{#with context}}{{> @partial-block }}{{/with}}'}],
+        true,
+        'success');
+    });
+    it('should render block from partial with context', function() {
+      shouldCompileToWithPartials(
+        '{{#> dude}}{{../context/value}}{{/dude}}',
+        [{context: {value: 'success'}}, {}, {dude: '{{#with context}}{{> @partial-block }}{{/with}}'}],
+        true,
+        'success');
+    });
+    it('should render block from partial with block params', function() {
+      shouldCompileToWithPartials(
+        '{{#with context as |me|}}{{#> dude}}{{me.value}}{{/dude}}{{/with}}',
+        [{context: {value: 'success'}}, {}, {dude: '{{> @partial-block }}'}],
+        true,
+        'success');
+    });
+  });
+
+  describe('inline partials', function() {
+    it('should define inline partials for template', function() {
+      shouldCompileTo('{{#*inline "myPartial"}}success{{/inline}}{{> myPartial}}', {}, 'success');
+    });
+    it('should overwrite multiple partials in the same template', function() {
+      shouldCompileTo('{{#*inline "myPartial"}}fail{{/inline}}{{#*inline "myPartial"}}success{{/inline}}{{> myPartial}}', {}, 'success');
+    });
+    it('should define inline partials for block', function() {
+      shouldCompileTo('{{#with .}}{{#*inline "myPartial"}}success{{/inline}}{{> myPartial}}{{/with}}', {}, 'success');
+      shouldThrow(function() {
+        shouldCompileTo('{{#with .}}{{#*inline "myPartial"}}success{{/inline}}{{/with}}{{> myPartial}}', {}, 'success');
+      }, Error, /myPartial could not/);
+    });
+    it('should override global partials', function() {
+      shouldCompileTo('{{#*inline "myPartial"}}success{{/inline}}{{> myPartial}}', {hash: {}, partials: {myPartial: function() { return 'fail'; }}}, 'success');
+    });
+    it('should override template partials', function() {
+      shouldCompileTo('{{#*inline "myPartial"}}fail{{/inline}}{{#with .}}{{#*inline "myPartial"}}success{{/inline}}{{> myPartial}}{{/with}}', {}, 'success');
+    });
+    it('should override partials down the entire stack', function() {
+      shouldCompileTo('{{#with .}}{{#*inline "myPartial"}}success{{/inline}}{{#with .}}{{#with .}}{{> myPartial}}{{/with}}{{/with}}{{/with}}', {}, 'success');
+    });
+
+    it('should define inline partials for partial call', function() {
+      shouldCompileToWithPartials(
+        '{{#*inline "myPartial"}}success{{/inline}}{{> dude}}',
+        [{}, {}, {dude: '{{> myPartial }}'}],
+        true,
+        'success');
+    });
+    it('should define inline partials in partial block call', function() {
+      shouldCompileToWithPartials(
+        '{{#> dude}}{{#*inline "myPartial"}}success{{/inline}}{{/dude}}',
+        [{}, {}, {dude: '{{> myPartial }}'}],
+        true,
+        'success');
+    });
+  });
+
   it('should pass compiler flags', function() {
     if (Handlebars.compile) {
       var env = Handlebars.create();
@@ -227,6 +349,12 @@ describe('partials', function() {
   describe('compat mode', function() {
     it('partials can access parents', function() {
       var string = 'Dudes: {{#dudes}}{{> dude}}{{/dudes}}';
+      var partial = '{{name}} ({{url}}) {{root}} ';
+      var hash = {root: 'yes', dudes: [{name: 'Yehuda', url: 'http://yehuda'}, {name: 'Alan', url: 'http://alan'}]};
+      shouldCompileToWithPartials(string, [hash, {}, {dude: partial}, true], true, 'Dudes: Yehuda (http://yehuda) yes Alan (http://alan) yes ');
+    });
+    it('partials can access parents with custom context', function() {
+      var string = 'Dudes: {{#dudes}}{{> dude "test"}}{{/dudes}}';
       var partial = '{{name}} ({{url}}) {{root}} ';
       var hash = {root: 'yes', dudes: [{name: 'Yehuda', url: 'http://yehuda'}, {name: 'Alan', url: 'http://alan'}]};
       shouldCompileToWithPartials(string, [hash, {}, {dude: partial}, true], true, 'Dudes: Yehuda (http://yehuda) yes Alan (http://alan) yes ');

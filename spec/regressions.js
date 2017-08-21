@@ -172,4 +172,35 @@ describe('Regressions', function() {
     var result = template(context);
     equals(result, 'foo');
   });
+
+  it('GH-1021: Each empty string key', function() {
+    var data = {
+      '': 'foo',
+      'name': 'Chris',
+      'value': 10000
+    };
+
+    shouldCompileTo('{{#each data}}Key: {{@key}}\n{{/each}}', {data: data}, 'Key: \nKey: name\nKey: value\n');
+  });
+
+  it('GH-1054: Should handle simple safe string responses', function() {
+    var root = '{{#wrap}}{{>partial}}{{/wrap}}';
+    var partials = {
+      partial: '{{#wrap}}<partial>{{/wrap}}'
+    };
+    var helpers = {
+      wrap: function(options) {
+        return new Handlebars.SafeString(options.fn());
+      }
+    };
+
+    shouldCompileToWithPartials(root, [{}, helpers, partials], true, '<partial>');
+  });
+
+  it('GH-1065: Sparse arrays', function() {
+    var array = [];
+    array[1] = 'foo';
+    array[3] = 'bar';
+    shouldCompileTo('{{#each array}}{{@index}}{{.}}{{/each}}', {array: array}, '1foo3bar');
+  });
 });

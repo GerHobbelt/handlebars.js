@@ -3,113 +3,49 @@ describe('ast', function() {
     return;
   }
 
-  var LOCATION_INFO = {
-    start: {
-      line: 1,
-      column: 1
-    },
-    end: {
-      line: 1,
-      column: 1
-    }
-  };
+  var AST = Handlebars.AST;
 
-  function testLocationInfoStorage(node) {
-    equals(node.loc.start.line, 1);
-    equals(node.loc.start.column, 1);
-    equals(node.loc.end.line, 1);
-    equals(node.loc.end.column, 1);
-  }
-
-  describe('MustacheStatement', function() {
-    it('should store args', function() {
-      var mustache = new handlebarsEnv.AST.MustacheStatement({}, null, null, true, {}, LOCATION_INFO);
-      equals(mustache.type, 'MustacheStatement');
-      equals(mustache.escaped, true);
-      testLocationInfoStorage(mustache);
-    });
-  });
   describe('BlockStatement', function() {
     it('should throw on mustache mismatch', function() {
       shouldThrow(function() {
         handlebarsEnv.parse('\n  {{#foo}}{{/bar}}');
       }, Handlebars.Exception, "foo doesn't match bar - 2:5");
     });
-
-    it('stores location info', function() {
-      var mustacheNode = new handlebarsEnv.AST.MustacheStatement([{ original: 'foo'}], null, null, false, {});
-      var block = new handlebarsEnv.AST.BlockStatement(
-            mustacheNode,
-            null, null,
-            {body: []},
-            {body: []},
-            {},
-            {},
-            {},
-            LOCATION_INFO);
-      testLocationInfoStorage(block);
-    });
-  });
-  describe('PathExpression', function() {
-    it('stores location info', function() {
-      var idNode = new handlebarsEnv.AST.PathExpression(false, 0, [], 'foo', LOCATION_INFO);
-      testLocationInfoStorage(idNode);
-    });
   });
 
-  describe('Hash', function() {
-    it('stores location info', function() {
-      var hash = new handlebarsEnv.AST.Hash([], LOCATION_INFO);
-      testLocationInfoStorage(hash);
-    });
-  });
+  describe('helpers', function() {
+    describe('#helperExpression', function() {
+      it('should handle mustache statements', function() {
+        equals(AST.helpers.helperExpression({type: 'MustacheStatement', params: [], hash: undefined}), false);
+        equals(AST.helpers.helperExpression({type: 'MustacheStatement', params: [1], hash: undefined}), true);
+        equals(AST.helpers.helperExpression({type: 'MustacheStatement', params: [], hash: {}}), true);
+      });
+      it('should handle block statements', function() {
+        equals(AST.helpers.helperExpression({type: 'BlockStatement', params: [], hash: undefined}), false);
+        equals(AST.helpers.helperExpression({type: 'BlockStatement', params: [1], hash: undefined}), true);
+        equals(AST.helpers.helperExpression({type: 'BlockStatement', params: [], hash: {}}), true);
+      });
+      it('should handle subexpressions', function() {
+        equals(AST.helpers.helperExpression({type: 'SubExpression'}), true);
+      });
+      it('should work with non-helper nodes', function() {
+        equals(AST.helpers.helperExpression({type: 'Program'}), false);
 
-  describe('ContentStatement', function() {
-    it('stores location info', function() {
-      var content = new handlebarsEnv.AST.ContentStatement('HI', LOCATION_INFO);
-      testLocationInfoStorage(content);
-    });
-  });
+        equals(AST.helpers.helperExpression({type: 'PartialStatement'}), false);
+        equals(AST.helpers.helperExpression({type: 'ContentStatement'}), false);
+        equals(AST.helpers.helperExpression({type: 'CommentStatement'}), false);
 
-  describe('CommentStatement', function() {
-    it('stores location info', function() {
-      var comment = new handlebarsEnv.AST.CommentStatement('HI', {}, LOCATION_INFO);
-      testLocationInfoStorage(comment);
-    });
-  });
+        equals(AST.helpers.helperExpression({type: 'PathExpression'}), false);
 
-  describe('NumberLiteral', function() {
-    it('stores location info', function() {
-      var integer = new handlebarsEnv.AST.NumberLiteral('6', LOCATION_INFO);
-      testLocationInfoStorage(integer);
-    });
-  });
+        equals(AST.helpers.helperExpression({type: 'StringLiteral'}), false);
+        equals(AST.helpers.helperExpression({type: 'NumberLiteral'}), false);
+        equals(AST.helpers.helperExpression({type: 'BooleanLiteral'}), false);
+        equals(AST.helpers.helperExpression({type: 'UndefinedLiteral'}), false);
+        equals(AST.helpers.helperExpression({type: 'NullLiteral'}), false);
 
-  describe('StringLiteral', function() {
-    it('stores location info', function() {
-      var string = new handlebarsEnv.AST.StringLiteral('6', LOCATION_INFO);
-      testLocationInfoStorage(string);
-    });
-  });
-
-  describe('BooleanLiteral', function() {
-    it('stores location info', function() {
-      var bool = new handlebarsEnv.AST.BooleanLiteral('true', LOCATION_INFO);
-      testLocationInfoStorage(bool);
-    });
-  });
-
-  describe('PartialStatement', function() {
-    it('stores location info', function() {
-      var pn = new handlebarsEnv.AST.PartialStatement('so_partial', [], {}, {}, LOCATION_INFO);
-      testLocationInfoStorage(pn);
-    });
-  });
-
-  describe('Program', function() {
-    it('storing location info', function() {
-      var pn = new handlebarsEnv.AST.Program([], null, {}, LOCATION_INFO);
-      testLocationInfoStorage(pn);
+        equals(AST.helpers.helperExpression({type: 'Hash'}), false);
+        equals(AST.helpers.helperExpression({type: 'HashPair'}), false);
+      });
     });
   });
 
@@ -123,8 +59,18 @@ describe('ast', function() {
       equals(node.loc.end.column, lastColumn);
     }
 
-    ast = Handlebars.parse('line 1 {{line1Token}}\n line 2 {{line2token}}\n line 3 {{#blockHelperOnLine3}}\nline 4{{line4token}}\n' +
-                           'line5{{else}}\n{{line6Token}}\n{{/blockHelperOnLine3}}');
+    ast = Handlebars.parse(
+              'line 1 {{line1Token}}\n'             // 1
+            + ' line 2 {{line2token}}\n'            // 2
+            + ' line 3 {{#blockHelperOnLine3}}\n'   // 3
+            + 'line 4{{line4token}}\n'              // 4
+            + 'line5{{else}}\n'                     // 5
+            + '{{line6Token}}\n'                    // 6
+            + '{{/blockHelperOnLine3}}\n'           // 7
+            + '{{#open}}\n'                         // 8
+            + '{{else inverse}}\n'                  // 9
+            + '{{else}}\n'                          // 10
+            + '{{/open}}');                         // 11
     body = ast.body;
 
     it('gets ContentNode line numbers', function() {
@@ -155,14 +101,23 @@ describe('ast', function() {
        var blockHelperNode = body[5],
            program = blockHelperNode.program;
 
-       testColumns(program, 3, 5, 8, 5);
+       testColumns(program, 3, 5, 31, 5);
      });
 
      it('correctly records the line numbers of an inverse of a block helper', function() {
        var blockHelperNode = body[5],
            inverse = blockHelperNode.inverse;
 
-       testColumns(inverse, 5, 7, 5, 0);
+       testColumns(inverse, 5, 7, 13, 0);
+     });
+
+     it('correctly records the line number of chained inverses', function() {
+       var chainInverseNode = body[7];
+
+       testColumns(chainInverseNode.program, 8, 9, 9, 0);
+       testColumns(chainInverseNode.inverse, 9, 10, 16, 0);
+       testColumns(chainInverseNode.inverse.body[0].program, 9, 10, 16, 0);
+       testColumns(chainInverseNode.inverse.body[0].inverse, 10, 11, 8, 0);
      });
   });
 

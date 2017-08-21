@@ -65,7 +65,7 @@ describe('parser', function() {
     equals(astFor('{{foo undefined null}}'), '{{ PATH:foo [UNDEFINED, NULL] }}\n');
   });
 
-  it('parses mutaches with DATA parameters', function() {
+  it('parses mustaches with DATA parameters', function() {
     equals(astFor('{{foo @bar}}'), '{{ PATH:foo [@PATH:bar] }}\n');
   });
 
@@ -111,6 +111,18 @@ describe('parser', function() {
 
   it('parses a partial with a complex name', function() {
     equals(astFor('{{> shared/partial?.bar}}'), '{{> PARTIAL:shared/partial?.bar }}\n');
+  });
+
+  it('parsers partial blocks', function() {
+    equals(astFor('{{#> foo}}bar{{/foo}}'), '{{> PARTIAL BLOCK:foo PROGRAM:\n  CONTENT[ \'bar\' ]\n }}\n');
+  });
+  it('should handle parser block mismatch', function() {
+    shouldThrow(function() {
+      astFor('{{#> goodbyes}}{{/hellos}}');
+    }, Error, (/goodbyes doesn't match hellos/));
+  });
+  it('parsers partial blocks with arguments', function() {
+    equals(astFor('{{#> foo context hash=value}}bar{{/foo}}'), '{{> PARTIAL BLOCK:foo PATH:context HASH{hash=PATH:value} PROGRAM:\n  CONTENT[ \'bar\' ]\n }}\n');
   });
 
   it('parses a comment', function() {
@@ -228,7 +240,48 @@ describe('parser', function() {
 
   describe('externally compiled AST', function() {
     it('can pass through an already-compiled AST', function() {
-      equals(astFor(new Handlebars.AST.Program([new Handlebars.AST.ContentStatement('Hello')], null)), 'CONTENT[ \'Hello\' ]\n');
+      equals(astFor({
+        type: 'Program',
+        body: [ {type: 'ContentStatement', value: 'Hello'}]
+      }), 'CONTENT[ \'Hello\' ]\n');
     });
+  });
+
+  describe('directives', function() {
+    it('should parse block directives', function() {
+      equals(astFor('{{#* foo}}{{/foo}}'), 'DIRECTIVE BLOCK:\n  PATH:foo []\n  PROGRAM:\n');
+    });
+    it('should parse directives', function() {
+      equals(astFor('{{* foo}}'), '{{ DIRECTIVE PATH:foo [] }}\n');
+    });
+    it('should fail if directives have inverse', function() {
+      shouldThrow(function() {
+        astFor('{{#* foo}}{{^}}{{/foo}}');
+      }, Error, /Unexpected inverse/);
+    });
+  });
+
+  it('GH1024 - should track program location properly', function() {
+    var p = Handlebars.parse('\n'
+      + '  {{#if foo}}\n'
+      + '    {{bar}}\n'
+      + '       {{else}}    {{baz}}\n'
+      + '\n'
+      + '     {{/if}}\n'
+      + '    ');
+
+    // We really need a deep equals but for now this should be stable...
+    equals(JSON.stringify(p.loc), JSON.stringify({
+      start: { line: 1, column: 0 },
+      end: { line: 7, column: 4 }
+    }));
+    equals(JSON.stringify(p.body[1].program.loc), JSON.stringify({
+      start: { line: 2, column: 13 },
+      end: { line: 4, column: 7 }
+    }));
+    equals(JSON.stringify(p.body[1].inverse.loc), JSON.stringify({
+      start: { line: 4, column: 15 },
+      end: { line: 6, column: 5 }
+    }));
   });
 });

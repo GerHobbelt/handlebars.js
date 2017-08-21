@@ -22,6 +22,10 @@ describe('basic context', function() {
                     'It works if all the required keys are provided');
   });
 
+  it('compiling with a string context', function() {
+    shouldCompileTo('{{.}}{{length}}', 'bye', 'bye3');
+  });
+
   it('compiling with an undefined context', function() {
     shouldCompileTo('Goodbye\n{{cruel}}\n{{world.bar}}!', undefined, 'Goodbye\n\n!');
 
@@ -203,8 +207,12 @@ describe('basic context', function() {
   });
 
   it('literal references', function() {
-    shouldCompileTo('Goodbye {{[foo bar]}} world!', {'foo bar': 'beautiful'},
-        'Goodbye beautiful world!', 'Literal paths can be used');
+    shouldCompileTo('Goodbye {{[foo bar]}} world!', {'foo bar': 'beautiful'}, 'Goodbye beautiful world!');
+    shouldCompileTo('Goodbye {{"foo bar"}} world!', {'foo bar': 'beautiful'}, 'Goodbye beautiful world!');
+    shouldCompileTo("Goodbye {{'foo bar'}} world!", {'foo bar': 'beautiful'}, 'Goodbye beautiful world!');
+    shouldCompileTo('Goodbye {{"foo[bar"}} world!', {'foo[bar': 'beautiful'}, 'Goodbye beautiful world!');
+    shouldCompileTo('Goodbye {{"foo\'bar"}} world!', {"foo'bar": 'beautiful'}, 'Goodbye beautiful world!');
+    shouldCompileTo("Goodbye {{'foo\"bar'}} world!", {'foo"bar': 'beautiful'}, 'Goodbye beautiful world!');
   });
 
   it("that current context path ({{.}}) doesn't hit helpers", function() {

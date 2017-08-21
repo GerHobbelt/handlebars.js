@@ -9,6 +9,8 @@ module.exports = function(grunt) {
       },
       files: [
         '*.js',
+        'bench/**/*.js',
+        'tasks/**/*.js',
         'lib/**/!(*.min|parser).js',
         'spec/**/!(*.amd|json2|require).js'
       ]
@@ -43,7 +45,9 @@ module.exports = function(grunt) {
 
     babel: {
       options: {
-        loose: ['es6.modules']
+        sourceMaps: 'inline',
+        loose: ['es6.modules'],
+        auxiliaryCommentBefore: 'istanbul ignore next'
       },
       amd: {
         options: {
@@ -75,7 +79,7 @@ module.exports = function(grunt) {
         module: {
           loaders: [
             // the optional 'runtime' transformer tells babel to require the runtime instead of inlining it.
-            { test: /\.jsx?$/, exclude: /node_modules/, loader: 'babel-loader?optional=runtime&loose=es6.modules' }
+            { test: /\.jsx?$/, exclude: /node_modules/, loader: 'babel-loader?optional=runtime&loose=es6.modules&auxiliaryCommentBefore=istanbul%20ignore%20next' }
           ]
         },
         output: {
@@ -158,10 +162,10 @@ module.exports = function(grunt) {
           build: process.env.TRAVIS_JOB_ID,
           urls: ['http://localhost:9999/spec/?headless=true', 'http://localhost:9999/spec/amd.html?headless=true'],
           detailedError: true,
-          concurrency: 2,
+          concurrency: 4,
           browsers: [
             {browserName: 'chrome'},
-            {browserName: 'firefox'},
+            {browserName: 'firefox', platform: 'Linux'},
             {browserName: 'safari', version: 7, platform: 'OS X 10.9'},
             {browserName: 'safari', version: 6, platform: 'OS X 10.8'},
             {browserName: 'internet explorer', version: 11, platform: 'Windows 8.1'},

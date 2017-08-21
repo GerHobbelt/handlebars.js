@@ -18,9 +18,9 @@ module.exports = function(grunt) {
     grunt.log.writeln('Updating to version ' + version);
 
     async.each([
-        ['lib/handlebars/base.js', /var VERSION = ['"](.*)['"];/, 'var VERSION = "' + version + '";'],
-        ['components/bower.json', /"version":.*/, '"version": "' + version + '",'],
-        ['components/handlebars.js.nuspec', /<version>.*<\/version>/, '<version>' + version + '</version>']
+        ['lib/handlebars/base.js', (/const VERSION = ['"](.*)['"];/), 'const VERSION = \'' + version + '\';'],
+        ['components/bower.json', (/"version":.*/), '"version": "' + version + '",'],
+        ['components/handlebars.js.nuspec', (/<version>.*<\/version>/), '<version>' + version + '</version>']
       ],
       function(args, callback) {
         replace.apply(undefined, args);
@@ -33,9 +33,9 @@ module.exports = function(grunt) {
       });
   });
 
-  function replace(path, regex, replace) {
+  function replace(path, regex, value) {
     var content = grunt.file.read(path);
-    content = content.replace(regex, replace);
+    content = content.replace(regex, value);
     grunt.file.write(path, content);
   }
 };

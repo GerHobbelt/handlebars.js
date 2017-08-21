@@ -8,6 +8,9 @@ describe('Visitor', function() {
     // stub methods are executed
     var visitor = new Handlebars.Visitor();
     visitor.accept(Handlebars.parse('{{foo}}{{#foo (bar 1 "1" true undefined null) foo=@data}}{{!comment}}{{> bar }} {{/foo}}'));
+    visitor.accept(Handlebars.parse('{{#> bar }} {{/bar}}'));
+    visitor.accept(Handlebars.parse('{{#* bar }} {{/bar}}'));
+    visitor.accept(Handlebars.parse('{{* bar }}'));
   });
 
   it('should traverse to stubs', function() {
@@ -40,8 +43,6 @@ describe('Visitor', function() {
     visitor.accept(Handlebars.parse('{{#foo.bar (foo.bar 1 "2" true) foo=@foo.bar}}{{!comment}}{{> bar }} {{/foo.bar}}'));
   });
 
-  it('should return undefined');
-
   describe('mutating', function() {
     describe('fields', function() {
       it('should replace value', function() {
@@ -49,7 +50,7 @@ describe('Visitor', function() {
 
         visitor.mutating = true;
         visitor.StringLiteral = function(string) {
-          return new Handlebars.AST.NumberLiteral(42, string.locInfo);
+          return {type: 'NumberLiteral', value: 42, loc: string.loc};
         };
 
         var ast = Handlebars.parse('{{foo foo="foo"}}');
@@ -109,7 +110,7 @@ describe('Visitor', function() {
 
         visitor.mutating = true;
         visitor.StringLiteral = function(string) {
-          return new Handlebars.AST.NumberLiteral(42, string.locInfo);
+          return {type: 'NumberLiteral', value: 42, loc: string.locInfo};
         };
 
         var ast = Handlebars.parse('{{foo "foo"}}');

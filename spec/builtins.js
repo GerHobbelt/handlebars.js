@@ -32,6 +32,11 @@ describe('builtin helpers', function() {
       shouldCompileTo(string, {goodbye: function() {return this.foo; }, world: 'world'}, 'cruel world!',
                       'if with function does not show the contents when returns undefined');
     });
+
+    it('should not change the depth list', function() {
+      var string = '{{#with foo}}{{#if goodbye}}GOODBYE cruel {{../world}}!{{/if}}{{/with}}';
+      shouldCompileTo(string, {foo: {goodbye: true}, world: 'world'}, 'GOODBYE cruel world!');
+    });
   });
 
   describe('#with', function() {
@@ -46,6 +51,16 @@ describe('builtin helpers', function() {
     it('with with else', function() {
       var string = '{{#with person}}Person is present{{else}}Person is not present{{/with}}';
       shouldCompileTo(string, {}, 'Person is not present');
+    });
+    it('with provides block parameter', function() {
+      var string = '{{#with person as |foo|}}{{foo.first}} {{last}}{{/with}}';
+      shouldCompileTo(string, {person: {first: 'Alan', last: 'Johnson'}}, 'Alan Johnson');
+    });
+    it('works when data is disabled', function() {
+      var template = CompilerContext.compile('{{#with person as |foo|}}{{foo.first}} {{last}}{{/with}}', {data: false});
+
+      var result = template({person: {first: 'Alan', last: 'Johnson'}});
+      equals(result, 'Alan Johnson');
     });
   });
 
@@ -210,6 +225,16 @@ describe('builtin helpers', function() {
                 'each with array function argument ignores the contents when empty');
     });
 
+    it('each object when last key is an empty string', function() {
+      var string = '{{#each goodbyes}}{{@index}}. {{text}}! {{/each}}cruel {{world}}!';
+      var hash = {goodbyes: {'a': {text: 'goodbye'}, b: {text: 'Goodbye'}, '': {text: 'GOODBYE'}}, world: 'world'};
+
+      var template = CompilerContext.compile(string);
+      var result = template(hash);
+
+      equal(result, '0. goodbye! 1. Goodbye! 2. GOODBYE! cruel world!', 'Empty string key is not skipped');
+    });
+
     it('data passed to helpers', function() {
       var string = '{{#each letters}}{{this}}{{detectDataInsideEach}}{{/each}}';
       var hash = {letters: ['a', 'b', 'c']};
@@ -276,7 +301,7 @@ describe('builtin helpers', function() {
       };
 
       shouldCompileTo(string, [hash,,,, {level: '03'}], '');
-      equals(3, levelArg);
+      equals('03', levelArg);
       equals('whee', logArg);
     });
     it('should output to info', function() {
@@ -311,11 +336,77 @@ describe('builtin helpers', function() {
     });
     it('should handle missing logger', function() {
       var string = '{{log blah}}';
-      var hash = { blah: 'whee' };
+      var hash = { blah: 'whee' },
+          called = false;
 
       console.error = undefined;
+      console.log = function(log) {
+        equals('whee', log);
+        called = true;
+      };
 
       shouldCompileTo(string, [hash,,,, {level: '03'}], '');
+      equals(true, called);
+    });
+
+    it('should handle string log levels', function() {
+      var string = '{{log blah}}';
+      var hash = { blah: 'whee' };
+      var called;
+
+      console.error = function(log) {
+        equals('whee', log);
+        called = true;
+      };
+
+      shouldCompileTo(string, [hash,,,, {level: 'error'}], '');
+      equals(true, called);
+
+      called = false;
+
+      shouldCompileTo(string, [hash,,,, {level: 'ERROR'}], '');
+      equals(true, called);
+    });
+    it('should handle hash log levels', function() {
+      var string = '{{log blah level="error"}}';
+      var hash = { blah: 'whee' };
+      var called;
+
+      console.error = function(log) {
+        equals('whee', log);
+        called = true;
+      };
+
+      shouldCompileTo(string, hash, '');
+      equals(true, called);
+    });
+    it('should handle hash log levels', function() {
+      var string = '{{log blah level="debug"}}';
+      var hash = { blah: 'whee' };
+      var called = false;
+
+      console.info = console.log = console.error = console.debug = function(log) {
+        equals('whee', log);
+        called = true;
+      };
+
+      shouldCompileTo(string, hash, '');
+      equals(false, called);
+    });
+    it('should pass multiple log arguments', function() {
+      var string = '{{log blah "foo" 1}}';
+      var hash = { blah: 'whee' };
+      var called;
+
+      console.info = console.log = function(log1, log2, log3) {
+        equals('whee', log1);
+        equals('foo', log2);
+        equals(1, log3);
+        called = true;
+      };
+
+      shouldCompileTo(string, hash, '');
+      equals(true, called);
     });
     /*eslint-enable no-console */
   });
