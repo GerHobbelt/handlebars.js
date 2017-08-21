@@ -103,13 +103,13 @@ describe('Regressions', function() {
   });
 
   it('GH-534: Object prototype aliases', function() {
-    /*eslint-disable no-extend-native */
+    /* eslint-disable no-extend-native */
     Object.prototype[0xD834] = true;
 
     shouldCompileTo('{{foo}}', { foo: 'bar' }, 'bar');
 
     delete Object.prototype[0xD834];
-    /*eslint-enable no-extend-native */
+    /* eslint-enable no-extend-native */
   });
 
   it('GH-437: Matching escaping', function() {
@@ -202,5 +202,14 @@ describe('Regressions', function() {
     array[1] = 'foo';
     array[3] = 'bar';
     shouldCompileTo('{{#each array}}{{@index}}{{.}}{{/each}}', {array: array}, '1foo3bar');
+  });
+
+  it('should support multiple levels of inline partials', function() {
+    var string = '{{#> layout}}{{#*inline "subcontent"}}subcontent{{/inline}}{{/layout}}';
+    var partials = {
+      doctype: 'doctype{{> content}}',
+      layout: '{{#> doctype}}{{#*inline "content"}}layout{{> subcontent}}{{/inline}}{{/doctype}}'
+    };
+    shouldCompileToWithPartials(string, [{}, {}, partials], true, 'doctypelayoutsubcontent');
   });
 });
