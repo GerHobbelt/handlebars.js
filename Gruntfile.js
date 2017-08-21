@@ -22,7 +22,7 @@ module.exports = function(grunt) {
       dist: {
         options: {
           processContent: function(content) {
-            return grunt.template.process('/*!\n\n <%= pkg.name %> v<%= pkg.version %>\n\n<%= grunt.file.read("LICENSE") %>\n@license\n*/\n')
+            return grunt.template.process('/**!\n\n @license\n <%= pkg.name %> v<%= pkg.version %>\n\n<%= grunt.file.read("LICENSE") %>\n*/\n')
                 + content;
           }
         },
@@ -166,11 +166,10 @@ module.exports = function(grunt) {
           browsers: [
             {browserName: 'chrome'},
             {browserName: 'firefox', platform: 'Linux'},
-            {browserName: 'safari', version: 7, platform: 'OS X 10.9'},
-            {browserName: 'safari', version: 6, platform: 'OS X 10.8'},
+            {browserName: 'safari', version: 9, platform: 'OS X 10.11'},
+            {browserName: 'safari', version: 8, platform: 'OS X 10.10'},
             {browserName: 'internet explorer', version: 11, platform: 'Windows 8.1'},
-            {browserName: 'internet explorer', version: 10, platform: 'Windows 8'},
-            {browserName: 'internet explorer', version: 9, platform: 'Windows 7'}
+            {browserName: 'internet explorer', version: 10, platform: 'Windows 8'}
           ]
         }
       },
