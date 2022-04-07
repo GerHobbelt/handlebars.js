@@ -21,7 +21,7 @@
     "node": ">=0.4.7"
   },
   "dependencies": {
-    "async": "^1.4.0",
+    "async": "^3.2.2",
     "source-map": "^0.4.4",
     "yargs": "^3.32.0"
   },
